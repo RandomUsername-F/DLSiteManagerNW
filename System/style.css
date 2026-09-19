@@ -107,6 +107,7 @@ body {
 ------------------------------------------------------------------ */
 #game-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   white-space: nowrap;
 }
@@ -123,6 +124,34 @@ body {
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   padding: 7px 10px;
+  position: relative; /* anchors .th-resize-handle */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+  user-select: none;
+}
+
+#game-table thead th:hover {
+  color: var(--text);
+  background: var(--panel-alt);
+}
+
+.th-sort-arrow {
+  color: var(--accent-text);
+  font-size: 10px;
+}
+
+.th-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.th-resize-handle:hover {
+  background: var(--accent);
 }
 
 #game-table tbody td {
@@ -145,39 +174,22 @@ body {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.col-title {
-  max-width: 340px;
+#game-table tbody td {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.col-comments {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-muted);
-}
-
-.col-tags {
-  color: var(--text-muted);
 }
 
 .col-cover {
   padding: 4px 6px 4px 10px;
-  width: 34px;
 }
 
-.cover-swatch {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.cover-thumb {
+  display: block;
   width: 28px;
   height: 28px;
+  object-fit: cover;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--swatch) 55%, var(--bg) 45%);
-  color: color-mix(in srgb, var(--swatch) 40%, white 60%);
-  font-family: var(--font-display);
-  font-size: 13px;
+  background: var(--panel-alt);
 }
 
 /* Rating stars, drawn with a gradient-filled mask rather than glyphs
@@ -242,6 +254,48 @@ body {
 }
 
 /* ---------------------------------------------------------------
+   Panel splitter — drag to resize the list/edit panel ratio
+------------------------------------------------------------------ */
+#panel-splitter {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: var(--border);
+}
+
+#panel-splitter:hover {
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------------------
+   Column visibility menu (right-click a column header)
+------------------------------------------------------------------ */
+#column-menu {
+  position: fixed;
+  z-index: 10;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.column-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.column-menu-item:hover {
+  background: var(--panel);
+  border-radius: var(--radius);
+}
+
+/* ---------------------------------------------------------------
    Edit panel (right) — a card-index style record for the
    selected game
 ------------------------------------------------------------------ */
@@ -284,6 +338,39 @@ body {
   margin-left: 8px;
   padding: 2px 8px;
   font-size: 11px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------
+   Empty states — no games in the table yet / nothing selected
+------------------------------------------------------------------ */
+#table-scroll:has(#game-table tbody:empty) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+#table-scroll:has(#game-table tbody:empty) table {
+  display: none;
+}
+
+#table-scroll:has(#game-table tbody:empty)::before {
+  content: "No games catalogued yet.";
+}
+
+#edit-empty-state {
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-align: center;
+  padding: 40px 8px;
 }
 
 .edit-field {

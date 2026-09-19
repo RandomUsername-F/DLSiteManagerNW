@@ -1,0 +1,30 @@
+{
+  "productCode": "RJ098234",
+  "title": "Nocturne of the Empty Library",
+  "circle": "Paper Moon",
+  "category": "ADV",
+  "language": "English",
+  "rating": 3.5,
+  "dlsiteRating": 3.8,
+  "releaseDate": "2021-11-02",
+  "addedDate": "2026-07-15",
+  "lastPlayedDate": "2026-08-03",
+  "timesPlayed": 2,
+  "secondsPlayed": 7200,
+  "tags": [
+    "Mystery",
+    "Slow Burn"
+  ],
+  "hvdbTags": [],
+  "cvs": [],
+  "comments": "",
+  "path": "D:\\Games\\PaperMoon\\Nocturne",
+  "sizeBytes": 671088640,
+  "images": {
+    "thumb": "images/thumb.jpg",
+    "gallery": [
+      "images/001.jpg",
+      "images/002.jpg"
+    ]
+  }
+}

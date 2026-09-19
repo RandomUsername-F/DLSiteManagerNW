@@ -3,6 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.html",
+  "chromium-args": "--user-data-dir=Database\\Settings",
+  "window": {
+    "title": "DLSite Manager",
+    "icon": "System/assets/icon.png",
+    "width": 1200,
+    "height": 800,
+    "min_width": 800,
+    "min_height": 500,
+    "toolbar": false,
+    "show": false
+  },
+  "nodejs": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
