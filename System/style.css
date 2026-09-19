@@ -1,0 +1,360 @@
+/* ---------------------------------------------------------------
+   Design tokens
+   A dark archive-ledger palette: warm charcoal, hairline dividers,
+   an oxblood ink-stamp accent for selection/action, and a small
+   amount of gold reserved strictly for star ratings.
+------------------------------------------------------------------ */
+:root {
+  --bg:            #14171c;
+  --panel:         #1b1f26;
+  --panel-alt:     #20242c;
+  --border:        #2b303a;
+  --border-soft:   #232830;
+
+  --text:          #e7e3d8;
+  --text-muted:    #8d93a0;
+  --text-faint:    #5b6270;
+
+  --accent:        #b0472c;
+  --accent-soft:   rgba(176, 71, 44, 0.16);
+  --accent-text:   #e9a58e;
+
+  --gold:          #c9a24a;
+  --gold-dim:      #4a4331;
+
+  --font-display:  Georgia, "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-ui:       -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+
+  --radius:        3px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------
+   Menu bar
+------------------------------------------------------------------ */
+#menu-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+.menu-item {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.menu-item:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------
+   Workspace: list panel (left) + edit panel (right)
+------------------------------------------------------------------ */
+#workspace {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+#list-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+
+#table-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------
+   Game table
+------------------------------------------------------------------ */
+#game-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+#game-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 10px;
+}
+
+#game-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+#game-table tbody tr:nth-child(even) {
+  background: var(--panel-alt);
+}
+
+#game-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+#game-table tbody tr.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.col-title {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-comments {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+
+.col-tags {
+  color: var(--text-muted);
+}
+
+.col-cover {
+  padding: 4px 6px 4px 10px;
+  width: 34px;
+}
+
+.cover-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--swatch) 55%, var(--bg) 45%);
+  color: color-mix(in srgb, var(--swatch) 40%, white 60%);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+/* Rating stars, drawn with a gradient-filled mask rather than glyphs
+   so the fill percentage can be set per-row. */
+.stars {
+  --fill: 0%;
+  display: inline-block;
+  width: 72px;
+  height: 12px;
+  background-image:
+    linear-gradient(90deg, var(--text-muted) 0 var(--fill), var(--border) var(--fill) 100%);
+  -webkit-mask-image: repeating-linear-gradient(90deg, black 0 10px, transparent 10px 14.4px);
+  mask-image: repeating-linear-gradient(90deg, black 0 10px, transparent 10px 14.4px);
+}
+
+.stars--gold {
+  background-image:
+    linear-gradient(90deg, var(--gold) 0 var(--fill), var(--gold-dim) var(--fill) 100%);
+}
+
+.stars--lg {
+  width: 100px;
+  height: 16px;
+}
+
+/* ---------------------------------------------------------------
+   Find bar (docked under the list, as in the original layout)
+------------------------------------------------------------------ */
+#find-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+#find-icon {
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+#find-input {
+  flex: 1 1 auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 8px;
+}
+
+#find-input::placeholder {
+  color: var(--text-faint);
+}
+
+#find-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---------------------------------------------------------------
+   Edit panel (right) — a card-index style record for the
+   selected game
+------------------------------------------------------------------ */
+#edit-panel {
+  flex: 0 0 340px;
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 14px 16px 24px;
+}
+
+.edit-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.btn:hover {
+  border-color: var(--text-faint);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f3e3dc;
+}
+
+.btn--inline {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.edit-field {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.edit-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 3px;
+}
+
+.edit-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.edit-value--title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.edit-value--path {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.edit-value--comments {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.edit-row {
+  display: flex;
+  gap: 16px;
+}
+
+.edit-row .edit-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------
+   Status bar
+------------------------------------------------------------------ */
+#status-bar {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------
+   Small-window behavior
+------------------------------------------------------------------ */
+@media (max-width: 760px) {
+  #workspace {
+    flex-direction: column;
+  }
+
+  #edit-panel {
+    flex: 0 0 auto;
+    max-height: 45vh;
+    border-top: 1px solid var(--border);
+  }
+}

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DLSite Manager</title>
+  <link rel="icon" href="system/assets/icon.png">
+  <link rel="stylesheet" href="system/style.css">
+</head>
+<body>
+
+  <nav id="menu-bar">
+    <button type="button" class="menu-item">Action</button>
+    <button type="button" class="menu-item">View</button>
+    <button type="button" class="menu-item">Settings</button>
+    <button type="button" class="menu-item">Help</button>
+  </nav>
+
+  <div id="workspace">
+
+    <section id="list-panel">
+      <div id="table-scroll">
+        <table id="game-table">
+          <thead>
+            <tr>
+              <th class="col-cover"></th>
+              <th class="col-rjcode">RJCode</th>
+              <th class="col-title">Title</th>
+              <th class="col-circle">Circle</th>
+              <th class="col-category">Category</th>
+              <th class="col-language">Language</th>
+              <th class="col-rating">Rating</th>
+              <th class="col-dlsrating">DLSite Rating</th>
+              <th class="col-size">Size</th>
+              <th class="col-played">Times Played</th>
+              <th class="col-lastplayed">Last Played</th>
+              <th class="col-tags">Tags</th>
+              <th class="col-comments">Comments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="is-selected">
+              <td class="col-cover"><span class="cover-swatch" style="--swatch: #6d5a9c">満</span></td>
+              <td class="col-rjcode">RJ012345</td>
+              <td class="col-title">Crimson Ledger of the Crossbell Archive</td>
+              <td class="col-circle">Falcom</td>
+              <td class="col-category">RPG</td>
+              <td class="col-language">Japanese</td>
+              <td class="col-rating"><span class="stars" style="--fill: 90%"></span></td>
+              <td class="col-dlsrating"><span class="stars stars--gold" style="--fill: 84%"></span></td>
+              <td class="col-size">1.28 GB</td>
+              <td class="col-played">14</td>
+              <td class="col-lastplayed">Sep 12, 2026</td>
+              <td class="col-tags">Fantasy, Investigation, Crime</td>
+              <td class="col-comments">Replayed for the Crossbell arc.</td>
+            </tr>
+            <tr>
+              <td class="col-cover"><span class="cover-swatch" style="--swatch: #3d7a8c">夜</span></td>
+              <td class="col-rjcode">RJ098234</td>
+              <td class="col-title">Nocturne of the Empty Library</td>
+              <td class="col-circle">Paper Moon</td>
+              <td class="col-category">ADV</td>
+              <td class="col-language">English</td>
+              <td class="col-rating"><span class="stars" style="--fill: 70%"></span></td>
+              <td class="col-dlsrating"><span class="stars stars--gold" style="--fill: 76%"></span></td>
+              <td class="col-size">640 MB</td>
+              <td class="col-played">2</td>
+              <td class="col-lastplayed">Aug 03, 2026</td>
+              <td class="col-tags">Mystery, Slow Burn</td>
+              <td class="col-comments"></td>
+            </tr>
+            <tr>
+              <td class="col-cover"><span class="cover-swatch" style="--swatch: #a8432b">祭</span></td>
+              <td class="col-rjcode">RJ044120</td>
+              <td class="col-title">Festival Season at Pier Seven</td>
+              <td class="col-circle">Tin Roof</td>
+              <td class="col-category">SLG</td>
+              <td class="col-language">Japanese</td>
+              <td class="col-rating"><span class="stars" style="--fill: 40%"></span></td>
+              <td class="col-dlsrating"><span class="stars stars--gold" style="--fill: 62%"></span></td>
+              <td class="col-size">2.91 GB</td>
+              <td class="col-played">0</td>
+              <td class="col-lastplayed">—</td>
+              <td class="col-tags">Slice of Life, Management</td>
+              <td class="col-comments">Waiting for a translation patch.</td>
+            </tr>
+            <tr>
+              <td class="col-cover"><span class="cover-swatch" style="--swatch: #c9a24a">星</span></td>
+              <td class="col-rjcode">RJ501099</td>
+              <td class="col-title">Starlight Over the Old Switchyard</td>
+              <td class="col-circle">Quiet Signal</td>
+              <td class="col-category">RPG</td>
+              <td class="col-language">Japanese</td>
+              <td class="col-rating"><span class="stars" style="--fill: 100%"></span></td>
+              <td class="col-dlsrating"><span class="stars stars--gold" style="--fill: 92%"></span></td>
+              <td class="col-size">3.4 GB</td>
+              <td class="col-played">31</td>
+              <td class="col-lastplayed">Sep 18, 2026</td>
+              <td class="col-tags">Fantasy, Train, Found Family</td>
+              <td class="col-comments">Best soundtrack this year.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="find-bar">
+        <span id="find-icon" aria-hidden="true">⌕</span>
+        <input id="find-input" type="text" placeholder="Filter games">
+      </div>
+    </section>
+
+    <aside id="edit-panel">
+      <div class="edit-toolbar">
+        <button type="button" class="btn btn--primary">Edit</button>
+        <button type="button" class="btn">Apply</button>
+        <button type="button" class="btn">Download info</button>
+      </div>
+
+      <div class="edit-field edit-field--title">
+        <label>Title</label>
+        <p class="edit-value edit-value--title">Crimson Ledger of the Crossbell Archive</p>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-field">
+          <label>RJCode</label>
+          <p class="edit-value">RJ012345</p>
+        </div>
+        <div class="edit-field">
+          <label>Circle</label>
+          <p class="edit-value">Falcom <button type="button" class="btn btn--inline">Edit</button></p>
+        </div>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-field">
+          <label>Category</label>
+          <p class="edit-value">RPG</p>
+        </div>
+        <div class="edit-field">
+          <label>Language</label>
+          <p class="edit-value">Japanese</p>
+        </div>
+      </div>
+
+      <div class="edit-field">
+        <label>Path</label>
+        <p class="edit-value edit-value--path">D:\Games\Falcom\CrimsonLedger <button type="button" class="btn btn--inline">Browse</button></p>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-field">
+          <label>Size</label>
+          <p class="edit-value">1.28 GB <button type="button" class="btn btn--inline">Update</button></p>
+        </div>
+        <div class="edit-field">
+          <label>Released</label>
+          <p class="edit-value">Apr 17, 2015</p>
+        </div>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-field">
+          <label>Rating</label>
+          <p class="edit-value"><span class="stars stars--lg" style="--fill: 90%"></span></p>
+        </div>
+        <div class="edit-field">
+          <label>DLSite Rating</label>
+          <p class="edit-value"><span class="stars stars--lg stars--gold" style="--fill: 84%"></span></p>
+        </div>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-field">
+          <label>Times Played</label>
+          <p class="edit-value">14</p>
+        </div>
+        <div class="edit-field">
+          <label>Time Played</label>
+          <p class="edit-value">38h 20m</p>
+        </div>
+      </div>
+
+      <div class="edit-field">
+        <label>Last Played</label>
+        <p class="edit-value">Sep 12, 2026</p>
+      </div>
+
+      <div class="edit-field">
+        <label>Tags</label>
+        <p class="edit-value">Fantasy, Investigation, Crime</p>
+      </div>
+
+      <div class="edit-field">
+        <label>HVDB Tags</label>
+        <p class="edit-value">Police, Mafia, Ensemble Cast</p>
+      </div>
+
+      <div class="edit-field">
+        <label>CVs</label>
+        <p class="edit-value">Tetsuya Kakihara, Aya Endou</p>
+      </div>
+
+      <div class="edit-field edit-field--comments">
+        <label>Comments</label>
+        <p class="edit-value edit-value--comments">Replayed for the Crossbell arc. Still the best AT battle system in the series.</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <footer id="status-bar">
+    <span>128 games catalogued · 1 selected</span>
+  </footer>
+
+</body>
+</html>
