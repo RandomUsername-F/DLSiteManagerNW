@@ -26,12 +26,26 @@
 //   path: "D:\\Games\\...",
 //   addedDate: "2026-06-01",
 //   images: { thumb: "images/thumb.jpg", gallery: ["images/001.jpg", ...] },
-//   original: { title, circle, category, language, sizeBytes, dlsiteRating,
-//               releaseDate, tags, hvdbTags, cvs },
-//   override: { title, circle, category, language, sizeBytes, rating,
-//               dlsiteRating, timesPlayed, secondsPlayed, lastPlayedDate,
-//               releaseDate, tags, hvdbTags, cvs, comments }
+//   original: { title, circleId, category, language, engine, version,
+//               sizeBytes, dlsiteRating, releaseDate, tags, hvdbTags, cvs,
+//               description },
+//   override: { title, circleId, category, language, engine, version,
+//               sizeBytes, rating, dlsiteRating, timesPlayed,
+//               secondsPlayed, lastPlayedDate, releaseDate, tags,
+//               hvdbTags, cvs, description, comments }
 // }
+//
+// CIRCLES
+// Circles (developers) are their own entity, not a free-text field on the
+// game, matching the old WinForms app's Circle/CircleEditor: a circle's
+// display Name can vary or be renamed, but its DLsite maker code (RGCode -
+// despite the name, DLsite actually uses RG/VG/BG prefixes depending on
+// the circle type) is the real, stable identifier. Games reference a
+// circle by the local circleId (Dexie's auto-increment key), same as the
+// old app's Game.CircleID foreign key - never by name or RGCode directly,
+// since either of those can be missing or change.
+//
+//   circles: { circleId: 1, name: "Falcom", rgCode: "VG01562" }
 
 const Dexie = require('dexie');
 
@@ -43,16 +57,20 @@ db.version(1).stores({
   // Dotted-path indexes reach into original/override for future
   // filtering/search; nothing queries them yet - list sorting currently
   // happens client-side in System/table.js against the resolved view.
-  games: 'productCode, original.title, original.circle, override.rating, override.lastPlayedDate, addedDate',
+  games: 'productCode, original.title, override.rating, override.lastPlayedDate, addedDate',
+  circles: '++circleId, rgCode, name',
   // Generic key/value store for app + UI settings.
   settings: 'key'
 });
 
 // Fields that exist in both original and override, in the order the edit
 // panel displays them. Shared with System/edit-panel.js so the two tabs
-// and the resolved/list view all agree on what a "field" is.
+// and the resolved/list view all agree on what a "field" is. circleId
+// resolves the same override-or-original way as everything else here;
+// System/edit-panel.js just renders it with a custom widget (name lookup
+// + "Edit" button opening the circle manager) instead of a text input.
 const OVERRIDABLE_FIELDS = [
-  'title', 'circle', 'category', 'language', 'engine', 'version', 'sizeBytes',
+  'title', 'circleId', 'category', 'language', 'engine', 'version', 'sizeBytes',
   'rating', 'dlsiteRating', 'timesPlayed', 'secondsPlayed',
   'lastPlayedDate', 'releaseDate', 'tags', 'hvdbTags', 'cvs', 'description', 'comments'
 ];
@@ -83,10 +101,22 @@ function resolveGame(record) {
   return resolved;
 }
 
-/** Returns every game in the library as resolved (effective) flat objects. */
+/**
+ * Returns every game in the library as resolved (effective) flat objects,
+ * with `circle` added as the looked-up circle name (System/table.js's
+ * circle column just reads this like any other plain field - it doesn't
+ * know circles are a separate table).
+ */
 async function getAllGames() {
-  const records = await db.games.toArray();
-  return records.map(resolveGame);
+  const [records, circles] = await Promise.all([db.games.toArray(), db.circles.toArray()]);
+  const circleById = new Map(circles.map(c => [c.circleId, c]));
+
+  return records.map(record => {
+    const resolved = resolveGame(record);
+    const circle = resolved.circleId != null ? circleById.get(resolved.circleId) : null;
+    resolved.circle = circle ? circle.name : '';
+    return resolved;
+  });
 }
 
 /** Returns one game's full raw record (both original and override), for the edit panel. */
@@ -102,6 +132,79 @@ async function updateGameOverride(productCode, overridePatch) {
   record.override = Object.assign({}, record.override, overridePatch);
   await db.games.put(record);
   return record;
+}
+
+/**
+ * Merges the given fields directly onto the top level of a game record -
+ * for things like `launcher`/`launchParameters` that are plain per-game
+ * settings, not part of the original/override system (there's no
+ * "original" launcher scraped from a website).
+ */
+async function updateGameFields(productCode, patch) {
+  await db.games.update(productCode, patch);
+}
+
+// ---------------------------------------------------------------
+// Circles
+// ---------------------------------------------------------------
+
+/** Returns every circle in the library. */
+async function getAllCircles() {
+  return db.circles.toArray();
+}
+
+/**
+ * Adds a new circle (circle.circleId is undefined/null) or updates an
+ * existing one. Returns the circle's id either way.
+ */
+async function saveCircle(circle) {
+  const record = {
+    name: (circle.name || '').trim(),
+    rgCode: normalizeRgCodeForStorage(circle.rgCode)
+  };
+
+  if (circle.circleId != null) {
+    await db.circles.update(circle.circleId, record);
+    return circle.circleId;
+  }
+  return db.circles.add(record);
+}
+
+async function deleteCircle(circleId) {
+  await db.circles.delete(circleId);
+}
+
+function normalizeRgCodeForStorage(raw) {
+  const trimmed = (raw == null ? '' : String(raw)).trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+/**
+ * Mirrors the old app's CircleEditor.IsValidRgCode: valid if it's an
+ * rg/vg/bg prefix followed by digits, or plain digits on their own (at
+ * least 3 characters either way). An empty/missing code is also valid -
+ * not every circle has a known one yet.
+ */
+function isValidRgCode(raw) {
+  if (raw == null || String(raw).trim() === '') return true;
+  const trimmed = String(raw).trim();
+  if (trimmed.length < 3) return false;
+
+  const prefix = trimmed.slice(0, 2);
+  if (/^(vg|bg|rg)$/i.test(prefix)) {
+    return /^\d+$/.test(trimmed.slice(2));
+  }
+  return /^\d+$/.test(trimmed);
+}
+
+/**
+ * Mirrors the old app's Circle.RGCode getter: a stored code that's just
+ * digits (no letter prefix) displays with an assumed "RG" prefix; codes
+ * that already have a letter prefix (RG/VG/BG, as entered) display as-is.
+ */
+function displayRgCode(raw) {
+  if (!raw) return '';
+  return /^\d/.test(String(raw)) ? 'RG' + raw : String(raw);
 }
 
 /** Reads a settings value, or defaultValue if it isn't set yet. */
@@ -121,6 +224,12 @@ async function setSetting(key, value) {
  * will do something similar, but ask the user first; this is just a way
  * to get the dummy fixture games into IndexedDB to test the UI without
  * building that flow yet.
+ *
+ * JSON backups store each game's circle as a portable, self-contained
+ * { name, rgCode } object (not a local circleId, which wouldn't mean
+ * anything on a different install) - this finds-or-creates the matching
+ * circle row (de-duplicated by rgCode, falling back to name) and swaps it
+ * for a circleId before the game record is saved.
  *
  * Run from devtools console:
  *   require('./System/db.js').seedFromBackups().then(n => console.log(n, 'games loaded'))
@@ -150,6 +259,42 @@ async function seedFromBackups() {
     }
   }
 
+  const circleCache = new Map(); // rgCode-or-name key -> circleId, so repeat circles across games only get one row
+
+  async function resolveCircleId(circleInfo) {
+    if (!circleInfo || !circleInfo.name) return null;
+
+    const cacheKey = circleInfo.rgCode || ('name:' + circleInfo.name);
+    if (circleCache.has(cacheKey)) return circleCache.get(cacheKey);
+
+    let existing = null;
+    if (circleInfo.rgCode) {
+      existing = await db.circles.where('rgCode').equals(circleInfo.rgCode).first();
+    }
+    if (!existing) {
+      existing = await db.circles.where('name').equals(circleInfo.name).first();
+    }
+
+    const id = existing ? existing.circleId : await saveCircle(circleInfo);
+    circleCache.set(cacheKey, id);
+    return id;
+  }
+
+  for (const record of records) {
+    if (record.original && record.original.circle) {
+      record.original.circleId = await resolveCircleId(record.original.circle);
+      delete record.original.circle;
+    }
+    if (record.override) {
+      if (record.override.circle) {
+        record.override.circleId = await resolveCircleId(record.override.circle);
+      } else {
+        record.override.circleId = null;
+      }
+      delete record.override.circle;
+    }
+  }
+
   if (records.length) {
     await db.games.bulkPut(records);
   }
@@ -163,6 +308,12 @@ module.exports = {
   getAllGames,
   getGameRecord,
   updateGameOverride,
+  updateGameFields,
+  getAllCircles,
+  saveCircle,
+  deleteCircle,
+  isValidRgCode,
+  displayRgCode,
   getSetting,
   setSetting,
   seedFromBackups

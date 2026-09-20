@@ -145,6 +145,18 @@ class GameTable {
     const sorted = this._sortedRows();
     this.tbody.innerHTML = '';
 
+    if (sorted.length === 0) {
+      const visibleCount = this.columns.filter(c => c.visible !== false).length;
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      const td = document.createElement('td');
+      td.colSpan = visibleCount;
+      td.textContent = 'No games catalogued yet.';
+      tr.appendChild(td);
+      this.tbody.appendChild(tr);
+      return;
+    }
+
     for (const game of sorted) {
       const tr = document.createElement('tr');
       tr.dataset.productCode = game.productCode;

@@ -480,6 +480,54 @@ body {
   margin-bottom: 16px;
 }
 
+.edit-toolbar--bottom {
+  margin-bottom: 0;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+#edit-content.is-empty {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------
+   Launcher / Launch parameters — outside the tabs, always in the
+   same place regardless of which tab is active
+------------------------------------------------------------------ */
+.launch-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.launch-field input[type="checkbox"] {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.launch-input {
+  flex: 1 1 auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 7px;
+}
+
+.launch-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.launch-input:disabled {
+  color: var(--text-faint);
+}
+
 .btn {
   appearance: none;
   border: 1px solid var(--border);
@@ -516,29 +564,12 @@ body {
 /* ---------------------------------------------------------------
    Empty states — no games in the table yet / nothing selected
 ------------------------------------------------------------------ */
-#table-scroll:has(#game-table tbody:empty) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.empty-row td {
+  padding: 48px 16px;
+  text-align: center;
   color: var(--text-faint);
   font-family: var(--font-display);
   font-size: 14px;
-}
-
-#table-scroll:has(#game-table tbody:empty) table {
-  display: none;
-}
-
-#table-scroll:has(#game-table tbody:empty)::before {
-  content: "No games catalogued yet.";
-}
-
-#edit-empty-state {
-  color: var(--text-faint);
-  font-family: var(--font-display);
-  font-size: 13px;
-  text-align: center;
-  padding: 40px 8px;
 }
 
 .edit-field {
@@ -620,6 +651,289 @@ body {
 .edit-row .edit-field {
   flex: 1 1 0;
   min-width: 0;
+}
+
+/* ---------------------------------------------------------------
+   Circle field (Game info / Original info) + circle manager modal
+------------------------------------------------------------------ */
+.circle-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.circle-rgcode {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1px 5px;
+}
+
+.circle-editor-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.circle-editor-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.circle-editor-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+
+.circle-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.circle-editor-row:last-child {
+  border-bottom: none;
+}
+
+.circle-editor-row.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.circle-editor-name,
+.circle-editor-rgcode {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.circle-editor-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.circle-editor-rgcode {
+  flex: 0 0 90px;
+}
+
+.circle-editor-name:focus,
+.circle-editor-rgcode:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.circle-editor-error {
+  min-height: 16px;
+  margin: 0 0 10px;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.circle-editor-box > .btn {
+  margin-bottom: 14px;
+}
+
+/* ---------------------------------------------------------------
+   Settings window
+------------------------------------------------------------------ */
+.settings-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 460px;
+  max-width: 92vw;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.settings-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.settings-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 4px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: default;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.settings-body {
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 14px;
+}
+
+.settings-tab-pane {
+  display: none;
+}
+
+.settings-tab-pane.is-active {
+  display: block;
+}
+
+.settings-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 10px 12px;
+  margin: 0 0 12px;
+}
+
+.settings-group > legend,
+.settings-subgroup > legend {
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.settings-subgroup {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 8px 10px 10px;
+  margin-top: 10px;
+}
+
+.settings-size-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.settings-size-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.settings-size-group input {
+  width: 50px;
+  margin-left: 4px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.settings-row + .settings-row {
+  margin-top: 10px;
+}
+
+.settings-radio,
+.settings-checkbox {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 6px;
+  cursor: default;
+}
+
+.settings-radio input,
+.settings-checkbox input {
+  margin-right: 6px;
+  accent-color: var(--accent);
+}
+
+.settings-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 7px;
+}
+
+.settings-group input[type="number"],
+.settings-subgroup input[type="number"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 5px;
+}
+
+.settings-font-size {
+  width: 60px;
+}
+
+.settings-input:focus,
+.settings-group input:focus,
+.settings-subgroup input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-hint {
+  margin: 6px 0 8px;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-inline-number {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+.settings-inline-number input {
+  width: 50px;
+  margin-left: 6px;
+}
+
+.settings-buttons {
+  flex: 0 0 auto;
 }
 
 /* ---------------------------------------------------------------

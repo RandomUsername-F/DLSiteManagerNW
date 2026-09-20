@@ -17,9 +17,10 @@ function requireModule(rootRelative, selfRelative) {
   }
 }
 
-const { getAllGames, getGameRecord, updateGameOverride, getSetting, setSetting } = requireModule('./System/db.js', './db.js');
+const { getAllGames, getGameRecord, updateGameOverride, updateGameFields, getAllCircles, saveCircle, deleteCircle, getSetting, setSetting } = requireModule('./System/db.js', './db.js');
 const { GameTable } = requireModule('./System/table.js', './table.js');
 const { EditPanel } = requireModule('./System/edit-panel.js', './edit-panel.js');
+const { openSettingsWindow } = requireModule('./System/settings-window.js', './settings-window.js');
 
 // The window is created hidden (package.json "window.show": false) so we
 // can restore its saved position/size first and avoid a flash of the
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initSplitter().catch(err => console.error('Splitter init failed:', err));
   initTable().catch(err => console.error('Table init failed:', err));
+  initSettingsMenu();
 });
 
 // ---------------------------------------------------------------
@@ -97,6 +99,57 @@ async function initSplitter() {
 }
 
 // ---------------------------------------------------------------
+// Settings window (menu bar → Settings)
+// ---------------------------------------------------------------
+function initSettingsMenu() {
+  const settingsBtn = document.getElementById('menu-settings-btn');
+  if (!settingsBtn) return;
+
+  settingsBtn.addEventListener('click', () => {
+    openSettingsWindow({
+      getSettings: () => getSetting('app', null),
+      saveSettings: (settings) => setSetting('app', settings),
+      browseFolder
+    });
+  });
+}
+
+/**
+ * Native folder picker via NW.js's <input type="file" nwdirectory> trick -
+ * there's no separate dialog API needed; a hidden file input with that
+ * attribute opens the OS folder chooser and reports the chosen path back
+ * through its normal 'change' event.
+ */
+function browseFolder() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.setAttribute('nwdirectory', '');
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', () => {
+      resolve(input.value || null);
+      input.remove();
+    }, { once: true });
+
+    // If the user cancels the dialog, no 'change' event fires; fall back
+    // to resolving null once the window regains focus.
+    window.addEventListener('focus', function onFocus() {
+      window.removeEventListener('focus', onFocus);
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          resolve(null);
+          input.remove();
+        }
+      }, 300);
+    }, { once: true });
+
+    input.click();
+  });
+}
+
+// ---------------------------------------------------------------
 // Game table
 // ---------------------------------------------------------------
 let editPanel;
@@ -107,8 +160,13 @@ async function initTable() {
 
   editPanel = new EditPanel({
     fetchRecord: getGameRecord,
-    onApply: updateGameOverride
+    onApply: updateGameOverride,
+    onUpdateLaunchSettings: updateGameFields,
+    fetchCircles: getAllCircles,
+    onSaveCircle: saveCircle,
+    onDeleteCircle: deleteCircle
   });
+  editPanel.show(null); // renders the empty/grayed field layout before anything is selected
 
   const table = new GameTable({
     container: tableEl,
@@ -137,6 +195,6 @@ async function initTable() {
   if (statusEl) {
     statusEl.textContent = `${games.length} game${games.length === 1 ? '' : 's'} catalogued`;
   }
-  // Empty-state styling (#table-scroll:has(tbody:empty)) is handled purely
-  // in CSS - no JS toggle needed since it reacts to the real DOM state.
+  // Empty state (no games yet) renders as a message row inside the table
+  // body itself (see System/table.js renderBody) so the header stays put.
 }

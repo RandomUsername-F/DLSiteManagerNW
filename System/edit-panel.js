@@ -15,13 +15,15 @@
 
 const { formatBytes, formatDate } = require('./table.js');
 const { confirmDialog } = require('./confirm-dialog.js');
+const { openCircleEditor } = require('./circle-editor.js');
+const { displayRgCode } = require('./db.js');
 
 // Fields shown in both tabs, in display order. Non-fullWidth fields are
 // paired two-per-row (reusing the .edit-row/.edit-field layout already
 // used for Product Code/Path); fullWidth fields get their own row.
 const EDIT_FIELDS = [
   { id: 'title', label: 'Title', type: 'text', fullWidth: true },
-  { id: 'circle', label: 'Circle', type: 'text' },
+  { id: 'circleId', label: 'Circle', type: 'circle-ref' },
   { id: 'category', label: 'Category', type: 'text' },
   { id: 'language', label: 'Language', type: 'text' },
   { id: 'engine', label: 'Engine', type: 'text' },
@@ -41,11 +43,15 @@ const EDIT_FIELDS = [
 ];
 
 class EditPanel {
-  constructor({ fetchRecord, onApply }) {
+  constructor({ fetchRecord, onApply, onUpdateLaunchSettings, fetchCircles, onSaveCircle, onDeleteCircle }) {
     this.fetchRecord = fetchRecord; // (productCode) => Promise<rawRecord>
     this.onApply = onApply;         // (productCode, overridePatch) => Promise
+    this.onUpdateLaunchSettings = onUpdateLaunchSettings; // (productCode, {launcher|launchParameters: {enabled, value}}) => Promise
+    this.fetchCircles = fetchCircles;     // () => Promise<Circle[]>
+    this.onSaveCircle = onSaveCircle;     // ({circleId?, name, rgCode}) => Promise<circleId>
+    this.onDeleteCircle = onDeleteCircle; // (circleId) => Promise
 
-    this.emptyStateEl = document.getElementById('edit-empty-state');
+    this.emptyStateEl = null; // no longer a separate element; #edit-content itself now shows an empty/grayed state
     this.contentEl = document.getElementById('edit-content');
     this.toggleBtn = document.getElementById('edit-toggle-btn');
     this.applyBtn = document.getElementById('edit-apply-btn');
@@ -62,10 +68,17 @@ class EditPanel {
     this.modifiedPane = document.getElementById('edit-tab-modified');
     this.originalPane = document.getElementById('edit-tab-original');
 
+    this.launcherCheckbox = document.getElementById('launcher-enabled-checkbox');
+    this.launcherInput = document.getElementById('launcher-input');
+    this.launchParamsCheckbox = document.getElementById('launch-params-enabled-checkbox');
+    this.launchParamsInput = document.getElementById('launch-params-input');
+
     this.currentRecord = null;
     this.editing = false;
     this.dirty = false;
     this._inputs = {}; // fieldId -> the live input element, while editing
+    this.circlesById = new Map();
+    this._pendingCircleId = null; // circleId chosen via the circle editor while in edit mode, applied on Apply
 
     this._bindStaticHandlers();
   }
@@ -80,10 +93,18 @@ class EditPanel {
       this.dirty = false;
       this._activateTab('modified');
       this._renderModifiedTab();
-      this.applyBtn.disabled = false;
+      this.applyBtn.hidden = false;
     });
 
     this.applyBtn.addEventListener('click', () => this._applyChanges());
+
+    // Launcher / Launch parameters are plain per-game settings, not part
+    // of the edit-mode/override system - they save immediately on change,
+    // independent of the Edit/Apply flow above.
+    this.launcherCheckbox.addEventListener('change', () => this._saveLaunchSetting('launcher'));
+    this.launcherInput.addEventListener('blur', () => this._saveLaunchSetting('launcher'));
+    this.launchParamsCheckbox.addEventListener('change', () => this._saveLaunchSetting('launchParameters'));
+    this.launchParamsInput.addEventListener('blur', () => this._saveLaunchSetting('launchParameters'));
 
     // Hover-preview: delegated on the strip so it works for thumbs added
     // after the fact, without rebinding per-image.
@@ -135,32 +156,46 @@ class EditPanel {
     return confirmed;
   }
 
-  /** Called by app.js when a row is selected (or with null to clear). */
+  /** Called by app.js when a row is selected (or with null/no match to clear). */
   async show(productCode) {
     if (!productCode) {
-      this._showEmptyState();
+      this._showNoSelection();
       return;
     }
 
     const record = await this.fetchRecord(productCode);
     if (!record) {
-      this._showEmptyState();
+      this._showNoSelection();
       return;
     }
+
+    const circles = this.fetchCircles ? await this.fetchCircles() : [];
+    this.circlesById = new Map(circles.map(c => [c.circleId, c]));
 
     this.currentRecord = record;
     this.editing = false;
     this.dirty = false;
     this._inputs = {};
+    this._pendingCircleId = (record.override && record.override.circleId != null) ? record.override.circleId : null;
 
-    this.emptyStateEl.hidden = true;
-    this.contentEl.hidden = false;
+    this.contentEl.classList.remove('is-empty');
     this.toggleBtn.disabled = false;
     this.downloadBtn.disabled = false;
-    this.applyBtn.disabled = true;
+    this.applyBtn.hidden = true;
 
     this.productCodeEl.textContent = record.productCode;
     this.pathTextEl.textContent = record.path || '';
+
+    const launcher = record.launcher || { enabled: false, value: '' };
+    const launchParameters = record.launchParameters || { enabled: false, value: '' };
+    this.launcherCheckbox.disabled = false;
+    this.launcherInput.disabled = false;
+    this.launcherCheckbox.checked = !!launcher.enabled;
+    this.launcherInput.value = launcher.value || '';
+    this.launchParamsCheckbox.disabled = false;
+    this.launchParamsInput.disabled = false;
+    this.launchParamsCheckbox.checked = !!launchParameters.enabled;
+    this.launchParamsInput.value = launchParameters.value || '';
 
     this._renderImageStrip(record);
     this._renderOriginalTab();
@@ -168,14 +203,56 @@ class EditPanel {
     this._activateTab('modified');
   }
 
-  _showEmptyState() {
+  /**
+   * No game selected: keep the full field layout visible (per design,
+   * rather than swapping in a separate "nothing selected" message) but
+   * empty, grayed out via #edit-content.is-empty, and non-interactive.
+   */
+  _showNoSelection() {
     this.currentRecord = null;
-    this.emptyStateEl.hidden = false;
-    this.contentEl.hidden = true;
+    this.editing = false;
+    this.dirty = false;
+    this._inputs = {};
+
+    this.contentEl.classList.add('is-empty');
     this.toggleBtn.disabled = true;
-    this.applyBtn.disabled = true;
     this.downloadBtn.disabled = true;
+    this.applyBtn.hidden = true;
+
+    this.productCodeEl.textContent = '';
+    this.pathTextEl.textContent = '';
+
+    this.launcherCheckbox.checked = false;
+    this.launcherCheckbox.disabled = true;
+    this.launcherInput.value = '';
+    this.launcherInput.disabled = true;
+    this.launchParamsCheckbox.checked = false;
+    this.launchParamsCheckbox.disabled = true;
+    this.launchParamsInput.value = '';
+    this.launchParamsInput.disabled = true;
+
+    this.imageStripEl.innerHTML = '';
+    this._previewImages = [];
     this._hideOverlay();
+
+    const emptyFieldSet = {};
+    for (const field of EDIT_FIELDS) emptyFieldSet[field.id] = { value: null, inherited: false };
+    this.originalPane.innerHTML = '';
+    this._renderFieldGroup(this.originalPane, EDIT_FIELDS, {}, { editable: false });
+    this.modifiedPane.innerHTML = '';
+    this._renderFieldGroup(this.modifiedPane, EDIT_FIELDS, emptyFieldSet, { editable: false, resolvedMode: true });
+    this._activateTab('modified');
+  }
+
+  async _saveLaunchSetting(key) {
+    if (!this.currentRecord || !this.onUpdateLaunchSettings) return;
+
+    const checkbox = key === 'launcher' ? this.launcherCheckbox : this.launchParamsCheckbox;
+    const input = key === 'launcher' ? this.launcherInput : this.launchParamsInput;
+    const value = { enabled: checkbox.checked, value: input.value };
+
+    this.currentRecord[key] = value;
+    await this.onUpdateLaunchSettings(this.currentRecord.productCode, { [key]: value });
   }
 
   // ---------------------------------------------------------------
@@ -288,7 +365,9 @@ class EditPanel {
 
       let valueEl;
 
-      if (options.editable && field.readOnly) {
+      if (field.type === 'circle-ref') {
+        valueEl = this._buildCircleFieldForContext(field, data, options);
+      } else if (options.editable && field.readOnly) {
         // e.g. ratings: still resolved (override-or-original), but never an
         // editable control, even while the rest of the tab is in edit mode.
         const overrideValue = data[field.id];
@@ -357,6 +436,96 @@ class EditPanel {
       p.appendChild(tag);
     }
     return p;
+  }
+
+  // ---------------------------------------------------------------
+  // Circle field — not a plain text field. Displays the looked-up circle
+  // name (+ RG code), and only gets an "Edit" button while the Game info
+  // tab is actually in edit mode (matching the old app: the circle picker
+  // updates a pending value that's only committed on Apply).
+  // ---------------------------------------------------------------
+  _buildCircleFieldForContext(field, data, options) {
+    let circleId, inherited, editable;
+
+    if (options.editable) {
+      const overrideId = data[field.id];
+      const originalId = options.originalValues[field.id];
+      inherited = overrideId == null;
+      circleId = inherited ? originalId : overrideId;
+      editable = true;
+    } else if (options.resolvedMode) {
+      const entry = data[field.id] || {};
+      circleId = entry.value;
+      inherited = entry.inherited;
+      editable = false;
+    } else {
+      circleId = data[field.id];
+      inherited = false;
+      editable = false;
+    }
+
+    return this._buildCircleField(circleId, inherited, editable);
+  }
+
+  _buildCircleField(circleId, inherited, editable) {
+    const circle = circleId != null ? this.circlesById.get(circleId) : null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'circle-field';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'edit-value';
+    nameEl.textContent = circle ? circle.name : '\u2014';
+    wrap.appendChild(nameEl);
+
+    if (circle && circle.rgCode) {
+      const codeEl = document.createElement('span');
+      codeEl.className = 'circle-rgcode';
+      codeEl.textContent = displayRgCode(circle.rgCode);
+      wrap.appendChild(codeEl);
+    }
+
+    if (inherited && circle) {
+      const tag = document.createElement('span');
+      tag.className = 'edit-inherited-tag';
+      tag.textContent = ' (from original)';
+      wrap.appendChild(tag);
+    }
+
+    if (editable) {
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'btn btn--inline';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => this._openCircleEditor());
+      wrap.appendChild(editBtn);
+    }
+
+    return wrap;
+  }
+
+  async _openCircleEditor() {
+    if (!this.currentRecord) return;
+
+    const circles = this.fetchCircles ? await this.fetchCircles() : Array.from(this.circlesById.values());
+
+    const result = await openCircleEditor({
+      circles,
+      selectedCircleId: this._pendingCircleId,
+      onSave: this.onSaveCircle,
+      onDelete: this.onDeleteCircle
+    });
+
+    if (result.cancelled) return;
+
+    this._pendingCircleId = result.selectedCircleId;
+    this.dirty = true;
+
+    // Refresh the local circle cache (a save may have added/renamed one)
+    // and re-render so the new name shows immediately.
+    const refreshed = this.fetchCircles ? await this.fetchCircles() : circles;
+    this.circlesById = new Map(refreshed.map(c => [c.circleId, c]));
+    this._renderModifiedTab();
   }
 
   _buildInput(field, overrideRawValue, originalRawValue) {
@@ -438,17 +607,20 @@ class EditPanel {
     const patch = {};
 
     for (const field of EDIT_FIELDS) {
+      if (field.type === 'circle-ref') continue; // handled separately below
       const entry = this._inputs[field.id];
       if (!entry) continue;
       patch[field.id] = parseInputValue(field, entry.element);
     }
+
+    patch.circleId = this._pendingCircleId;
 
     await this.onApply(this.currentRecord.productCode, patch);
 
     this.currentRecord.override = Object.assign({}, this.currentRecord.override, patch);
     this.editing = false;
     this.dirty = false;
-    this.applyBtn.disabled = true;
+    this.applyBtn.hidden = true;
     this._renderModifiedTab();
   }
 }

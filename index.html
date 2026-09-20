@@ -11,7 +11,7 @@
   <nav id="menu-bar">
     <button type="button" class="menu-item">Action</button>
     <button type="button" class="menu-item">View</button>
-    <button type="button" class="menu-item">Settings</button>
+    <button type="button" class="menu-item" id="menu-settings-btn">Settings</button>
     <button type="button" class="menu-item">Help</button>
   </nav>
 
@@ -39,17 +39,7 @@
     <div id="panel-splitter" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
 
     <aside id="edit-panel">
-      <div class="edit-toolbar">
-        <button type="button" class="btn btn--primary" id="edit-toggle-btn" disabled>Edit</button>
-        <button type="button" class="btn" id="edit-apply-btn" disabled>Apply</button>
-        <button type="button" class="btn" id="edit-download-btn" disabled>Download info</button>
-      </div>
-
-      <div id="edit-empty-state">
-        <p>No game selected.</p>
-      </div>
-
-      <div id="edit-content" hidden>
+      <div id="edit-content">
         <div id="image-strip"></div>
 
         <div class="edit-field">
@@ -72,6 +62,21 @@
 
         <div id="edit-tab-modified" class="edit-tab-pane is-active"></div>
         <div id="edit-tab-original" class="edit-tab-pane"></div>
+
+        <div class="launch-field">
+          <input type="checkbox" id="launcher-enabled-checkbox">
+          <input type="text" id="launcher-input" class="launch-input" placeholder="Launcher">
+        </div>
+        <div class="launch-field">
+          <input type="checkbox" id="launch-params-enabled-checkbox">
+          <input type="text" id="launch-params-input" class="launch-input" placeholder="Launch parameters">
+        </div>
+
+        <div class="edit-toolbar edit-toolbar--bottom">
+          <button type="button" class="btn btn--primary" id="edit-toggle-btn">Edit</button>
+          <button type="button" class="btn" id="edit-apply-btn" hidden>Apply</button>
+          <button type="button" class="btn" id="edit-download-btn">Download info</button>
+        </div>
       </div>
     </aside>
 
