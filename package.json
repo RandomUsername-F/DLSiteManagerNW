@@ -6,7 +6,7 @@
   "chromium-args": "--user-data-dir=Database\\Settings",
   "window": {
     "title": "DLSite Manager",
-    "icon": "System/assets/icon.png",
+    "icon": "system/assets/icon.png",
     "width": 1200,
     "height": 800,
     "min_width": 800,

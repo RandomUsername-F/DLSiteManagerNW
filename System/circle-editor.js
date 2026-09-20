@@ -1,4 +1,4 @@
-// System/circle-editor.js
+// system/circle-editor.js
 // Circle manager modal, modeled on the old WinForms app's CircleEditor: a
 // shared list of every circle across the whole library (Name + RGCode -
 // the DLsite maker/circle code, which is the true stable identifier; the

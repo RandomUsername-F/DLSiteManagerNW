@@ -1,4 +1,4 @@
-// System/table.js
+// system/table.js
 // Renders and manages the interactive game table: column drag-to-reorder,
 // drag-to-resize, right-click show/hide, and click-to-cycle sort
 // (unsorted -> ascending -> descending -> unsorted). Vanilla DOM, no

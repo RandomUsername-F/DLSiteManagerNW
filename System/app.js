@@ -1,5 +1,5 @@
-// System/app.js
-// Single entry point, loaded via <script src="System/app.js" defer> in
+// system/app.js
+// Single entry point, loaded via <script src="system/app.js" defer> in
 // index.html. Everything else is require()'d as a plain CommonJS module.
 //
 // NOTE ON PATHS: require() calls made from a <script src> tag (as opposed
@@ -17,10 +17,10 @@ function requireModule(rootRelative, selfRelative) {
   }
 }
 
-const { getAllGames, getGameRecord, updateGameOverride, updateGameFields, getAllCircles, saveCircle, deleteCircle, getSetting, setSetting } = requireModule('./System/db.js', './db.js');
-const { GameTable } = requireModule('./System/table.js', './table.js');
-const { EditPanel } = requireModule('./System/edit-panel.js', './edit-panel.js');
-const { openSettingsWindow } = requireModule('./System/settings-window.js', './settings-window.js');
+const { getAllGames, getGameRecord, updateGameOverride, updateGameFields, getAllCircles, saveCircle, deleteCircle, getSetting, setSetting } = requireModule('./system/db.js', './db.js');
+const { GameTable } = requireModule('./system/table.js', './table.js');
+const { EditPanel } = requireModule('./system/edit-panel.js', './edit-panel.js');
+const { openSettingsWindow } = requireModule('./system/settings-window.js', './settings-window.js');
 
 // The window is created hidden (package.json "window.show": false) so we
 // can restore its saved position/size first and avoid a flash of the
@@ -196,5 +196,5 @@ async function initTable() {
     statusEl.textContent = `${games.length} game${games.length === 1 ? '' : 's'} catalogued`;
   }
   // Empty state (no games yet) renders as a message row inside the table
-  // body itself (see System/table.js renderBody) so the header stays put.
+  // body itself (see system/table.js renderBody) so the header stays put.
 }

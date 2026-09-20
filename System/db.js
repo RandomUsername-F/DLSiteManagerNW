@@ -1,6 +1,6 @@
-// System/db.js
+// system/db.js
 // CommonJS module - loaded via require(), NOT a <script src="..."> tag, so
-// __dirname below is reliably this file's own folder (System/) regardless
+// __dirname below is reliably this file's own folder (system/) regardless
 // of how the app was launched.
 //
 // Wraps the Dexie (IndexedDB) database that stores the live game library,
@@ -56,7 +56,7 @@ db.version(1).stores({
   // name under Database/Games/DLsite/<productCode>/ used for JSON backups.
   // Dotted-path indexes reach into original/override for future
   // filtering/search; nothing queries them yet - list sorting currently
-  // happens client-side in System/table.js against the resolved view.
+  // happens client-side in system/table.js against the resolved view.
   games: 'productCode, original.title, override.rating, override.lastPlayedDate, addedDate',
   circles: '++circleId, rgCode, name',
   // Generic key/value store for app + UI settings.
@@ -64,10 +64,10 @@ db.version(1).stores({
 });
 
 // Fields that exist in both original and override, in the order the edit
-// panel displays them. Shared with System/edit-panel.js so the two tabs
+// panel displays them. Shared with system/edit-panel.js so the two tabs
 // and the resolved/list view all agree on what a "field" is. circleId
 // resolves the same override-or-original way as everything else here;
-// System/edit-panel.js just renders it with a custom widget (name lookup
+// system/edit-panel.js just renders it with a custom widget (name lookup
 // + "Edit" button opening the circle manager) instead of a text input.
 const OVERRIDABLE_FIELDS = [
   'title', 'circleId', 'category', 'language', 'engine', 'version', 'sizeBytes',
@@ -103,7 +103,7 @@ function resolveGame(record) {
 
 /**
  * Returns every game in the library as resolved (effective) flat objects,
- * with `circle` added as the looked-up circle name (System/table.js's
+ * with `circle` added as the looked-up circle name (system/table.js's
  * circle column just reads this like any other plain field - it doesn't
  * know circles are a separate table).
  */
@@ -232,7 +232,7 @@ async function setSetting(key, value) {
  * for a circleId before the game record is saved.
  *
  * Run from devtools console:
- *   require('./System/db.js').seedFromBackups().then(n => console.log(n, 'games loaded'))
+ *   require('./system/db.js').seedFromBackups().then(n => console.log(n, 'games loaded'))
  */
 async function seedFromBackups() {
   const fs = require('fs');

@@ -1,9 +1,9 @@
-// System/edit-panel.js
+// system/edit-panel.js
 // Renders the right-side edit panel: image strip with hover-preview,
 // Product Code / Path fields, and the Game info / Original info tabs.
 // Pure UI - all data access goes through the fetchRecord/onApply callbacks
 // passed in, so this file never touches Dexie directly (same separation
-// System/table.js follows with System/app.js).
+// system/table.js follows with system/app.js).
 //
 // SIMPLIFICATIONS FROM THE ORIGINAL APP (flagged here rather than silently):
 // - Star ratings are edited via a plain number input (0-5, step 0.5) next
@@ -83,18 +83,18 @@ class EditPanel {
     this._bindStaticHandlers();
   }
 
-  _bindStaticHandlers() {
-    this.tabButtons.forEach(btn => {
-      btn.addEventListener('click', () => this._activateTab(btn.dataset.tab));
-    });
+_bindStaticHandlers() {
+  this.tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => this._activateTab(btn.dataset.tab));
+  });
 
-    this.toggleBtn.addEventListener('click', () => {
-      this.editing = true;
-      this.dirty = false;
-      this._activateTab('modified');
-      this._renderModifiedTab();
-      this.applyBtn.hidden = false;
-    });
+  this.toggleBtn.addEventListener('click', () => {
+    this.editing = true;
+    this.dirty = false;
+    this._activateTab('modified');
+    this._renderModifiedTab();
+    this.applyBtn.hidden = false;
+  });
 
     this.applyBtn.addEventListener('click', () => this._applyChanges());
 
@@ -133,7 +133,7 @@ class EditPanel {
     };
     this.imageStripEl.addEventListener('wheel', cycle, { passive: false });
     this.overlayEl.addEventListener('wheel', cycle, { passive: false });
-  }
+}
 
   /**
    * Called by app.js before switching to a different game. If the user is

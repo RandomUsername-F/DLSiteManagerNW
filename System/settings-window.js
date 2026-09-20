@@ -1,4 +1,4 @@
-// System/settings-window.js
+// system/settings-window.js
 // Settings modal, opened from the "Settings" menu-bar button. Ported from
 // the old WinForms app's SettingsForm - but only the General and UI
 // Settings tabs, as instructed. Translator, DLSite, and Performance are

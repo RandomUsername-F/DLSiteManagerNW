@@ -1,4 +1,4 @@
-// System/confirm-dialog.js
+// system/confirm-dialog.js
 // A small custom OK/Cancel modal matching the app's visual design,
 // used instead of the native window.confirm() (which would look like a
 // plain OS dialog box, out of place next to the rest of the UI).
