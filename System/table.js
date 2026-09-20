@@ -158,11 +158,15 @@ class GameTable {
         tr.appendChild(td);
       }
 
-      tr.addEventListener('click', () => {
+      tr.addEventListener('click', async () => {
+        if (game.productCode === this.selectedCode) return; // already selected, nothing to confirm
+
+        const proceed = await this.onRowSelected(game);
+        if (proceed === false) return; // selection was cancelled (e.g. unsaved-changes prompt)
+
         this.selectedCode = game.productCode;
         this.tbody.querySelectorAll('tr.is-selected').forEach(el => el.classList.remove('is-selected'));
         tr.classList.add('is-selected');
-        this.onRowSelected(game);
       });
 
       this.tbody.appendChild(tr);
@@ -362,4 +366,4 @@ function formatDate(isoOrDate) {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
 }
 
-module.exports = { GameTable, DEFAULT_COLUMNS };
+module.exports = { GameTable, DEFAULT_COLUMNS, formatBytes, formatDate };

@@ -306,6 +306,174 @@ body {
   padding: 14px 16px 24px;
 }
 
+/* ---------------------------------------------------------------
+   Image strip + hover-preview overlay
+------------------------------------------------------------------ */
+#image-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.edit-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--panel-alt);
+}
+
+.edit-thumb:hover {
+  border-color: var(--accent);
+}
+
+#image-preview-overlay {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 14, 0.92);
+  border: 1px solid var(--border);
+}
+
+#image-preview-overlay img {
+  max-width: 92%;
+  max-height: 92%;
+  object-fit: contain;
+}
+
+/* ---------------------------------------------------------------
+   Game info / Original info tabs
+------------------------------------------------------------------ */
+#edit-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.edit-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 4px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: default;
+}
+
+.edit-tab:hover {
+  color: var(--text);
+}
+
+.edit-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.edit-tab-pane {
+  display: none;
+}
+
+.edit-tab-pane.is-active {
+  display: block;
+}
+
+.edit-inherited-tag {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.stars--inherited {
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------
+   Editable field inputs (Game info tab, edit mode)
+------------------------------------------------------------------ */
+.edit-field input[type="text"],
+.edit-field input[type="number"],
+.edit-field input[type="date"],
+.edit-field textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 7px;
+}
+
+.edit-field input:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.edit-field textarea {
+  resize: vertical;
+  font-family: var(--font-ui);
+}
+
+.star-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-input-number {
+  width: 56px;
+}
+
+.edit-input--title {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------
+   Confirm modal (e.g. "discard unsaved changes?")
+------------------------------------------------------------------ */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 14, 0.6);
+}
+
+.confirm-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-message {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .edit-toolbar {
   display: flex;
   gap: 8px;
@@ -407,6 +575,41 @@ body {
 .edit-value--comments {
   color: var(--text-muted);
   font-style: italic;
+  white-space: pre-wrap;
+}
+
+.edit-value--description {
+  color: var(--text);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.edit-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-alt);
+  padding: 2px 8px;
+}
+
+.edit-details summary {
+  font-size: 11px;
+  color: var(--text-faint);
+  cursor: default;
+  padding: 6px 0;
+  user-select: none;
+}
+
+.edit-details[open] summary {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.edit-details .edit-value--description {
+  padding-bottom: 8px;
+}
+
+.edit-details textarea {
+  margin-bottom: 8px;
 }
 
 .edit-row {

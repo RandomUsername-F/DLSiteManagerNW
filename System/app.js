@@ -17,8 +17,9 @@ function requireModule(rootRelative, selfRelative) {
   }
 }
 
-const { getAllGames, getSetting, setSetting } = requireModule('./System/db.js', './db.js');
+const { getAllGames, getGameRecord, updateGameOverride, getSetting, setSetting } = requireModule('./System/db.js', './db.js');
 const { GameTable } = requireModule('./System/table.js', './table.js');
+const { EditPanel } = requireModule('./System/edit-panel.js', './edit-panel.js');
 
 // The window is created hidden (package.json "window.show": false) so we
 // can restore its saved position/size first and avoid a flash of the
@@ -98,15 +99,27 @@ async function initSplitter() {
 // ---------------------------------------------------------------
 // Game table
 // ---------------------------------------------------------------
+let editPanel;
+
 async function initTable() {
   const tableEl = document.getElementById('game-table');
   const statusEl = document.querySelector('#status-bar span');
+
+  editPanel = new EditPanel({
+    fetchRecord: getGameRecord,
+    onApply: updateGameOverride
+  });
 
   const table = new GameTable({
     container: tableEl,
     onColumnsChanged: (state) => setSetting('ui.columns', state),
     onSortChanged: (sort) => setSetting('ui.sort', sort),
-    onRowSelected: (game) => showGameInEditPanel(game)
+    onRowSelected: async (game) => {
+      const canLeave = await editPanel.requestLeave();
+      if (!canLeave) return false;
+      await editPanel.show(game.productCode);
+      return true;
+    }
   });
 
   const [savedColumns, savedSort] = await Promise.all([
@@ -126,35 +139,4 @@ async function initTable() {
   }
   // Empty-state styling (#table-scroll:has(tbody:empty)) is handled purely
   // in CSS - no JS toggle needed since it reacts to the real DOM state.
-}
-
-// Minimal stub: proves selection flows through to the edit panel. The full
-// editable form (per-field inputs, Edit/Apply wiring, HVDB/CV fields,
-// comments, etc.) is a separate task, not attempted here.
-function showGameInEditPanel(game) {
-  const panel = document.getElementById('edit-panel');
-
-  const empty = document.getElementById('edit-empty-state');
-  if (empty) empty.remove();
-
-  panel.querySelectorAll('.btn').forEach(btn => { btn.disabled = false; });
-
-  let display = document.getElementById('edit-display');
-  if (!display) {
-    display = document.createElement('div');
-    display.id = 'edit-display';
-    panel.appendChild(display);
-  }
-
-  display.innerHTML = '';
-
-  const title = document.createElement('p');
-  title.className = 'edit-value edit-value--title';
-  title.textContent = game.title;
-  display.appendChild(title);
-
-  const code = document.createElement('p');
-  code.className = 'edit-value';
-  code.textContent = game.productCode;
-  display.appendChild(code);
 }

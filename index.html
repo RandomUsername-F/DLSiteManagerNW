@@ -40,16 +40,45 @@
 
     <aside id="edit-panel">
       <div class="edit-toolbar">
-        <button type="button" class="btn btn--primary" disabled>Edit</button>
-        <button type="button" class="btn" disabled>Apply</button>
-        <button type="button" class="btn" disabled>Download info</button>
+        <button type="button" class="btn btn--primary" id="edit-toggle-btn" disabled>Edit</button>
+        <button type="button" class="btn" id="edit-apply-btn" disabled>Apply</button>
+        <button type="button" class="btn" id="edit-download-btn" disabled>Download info</button>
       </div>
 
       <div id="edit-empty-state">
         <p>No game selected.</p>
       </div>
+
+      <div id="edit-content" hidden>
+        <div id="image-strip"></div>
+
+        <div class="edit-field">
+          <label>Product Code</label>
+          <p class="edit-value" id="field-productcode"></p>
+        </div>
+
+        <div class="edit-field">
+          <label>Path</label>
+          <p class="edit-value edit-value--path">
+            <span id="field-path-text"></span>
+            <button type="button" class="btn btn--inline" id="browse-path-btn">Browse</button>
+          </p>
+        </div>
+
+        <nav id="edit-tabs">
+          <button type="button" class="edit-tab is-active" data-tab="modified">Game info</button>
+          <button type="button" class="edit-tab" data-tab="original">Original info</button>
+        </nav>
+
+        <div id="edit-tab-modified" class="edit-tab-pane is-active"></div>
+        <div id="edit-tab-original" class="edit-tab-pane"></div>
+      </div>
     </aside>
 
+  </div>
+
+  <div id="image-preview-overlay" hidden>
+    <img id="image-preview-img" alt="">
   </div>
 
   <footer id="status-bar">
