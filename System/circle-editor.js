@@ -19,6 +19,12 @@
 
 const { isValidRgCode } = require('./db.js');
 
+// See system/dom-bridge.js: bare `document` isn't reliable inside a
+// require()'d module on this NW.js build, so every DOM-touching file gets
+// it explicitly instead. This `const` shadows the unreliable global for
+// the rest of this file.
+const document = require('./dom-bridge.js').getDocument();
+
 function openCircleEditor({ circles, selectedCircleId, onSave, onDelete }) {
   return new Promise((resolve) => {
     // Local mutable copy so Cancel can discard everything untouched.

@@ -18,6 +18,12 @@ const { confirmDialog } = require('./confirm-dialog.js');
 const { openCircleEditor } = require('./circle-editor.js');
 const { displayRgCode } = require('./db.js');
 
+// See system/dom-bridge.js: bare `document` isn't reliable inside a
+// require()'d module on this NW.js build, so every DOM-touching file gets
+// it explicitly instead. This `const` shadows the unreliable global for
+// the rest of this file.
+const document = require('./dom-bridge.js').getDocument();
+
 /**
  * getElementById that throws a specific, immediately-diagnosable error
  * instead of returning null and letting some later line fail with a

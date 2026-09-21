@@ -7,6 +7,12 @@
 // reordering/hiding trivial (there's no separate "move this DOM node"
 // step; we just rebuild in the new order).
 
+// See system/dom-bridge.js: bare `document` isn't reliable inside a
+// require()'d module on this NW.js build, so every DOM-touching file gets
+// it explicitly instead. This `const` shadows the unreliable global for
+// the rest of this file - nothing below needed to change.
+const document = require('./dom-bridge.js').getDocument();
+
 // Column order in this array IS the default display order.
 const DEFAULT_COLUMNS = [
   { id: 'cover',      label: '',              width: 40,  minWidth: 40,  sortable: false, resizable: false },

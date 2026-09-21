@@ -5,6 +5,12 @@
 //
 // Usage: const confirmed = await confirmDialog('Discard your changes?');
 
+// See system/dom-bridge.js: bare `document` isn't reliable inside a
+// require()'d module on this NW.js build, so every DOM-touching file gets
+// it explicitly instead. This `const` shadows the unreliable global for
+// the rest of this file.
+const document = require('./dom-bridge.js').getDocument();
+
 function confirmDialog(message, options) {
   const okLabel = (options && options.okLabel) || 'Discard changes';
   const cancelLabel = (options && options.cancelLabel) || 'Keep editing';
