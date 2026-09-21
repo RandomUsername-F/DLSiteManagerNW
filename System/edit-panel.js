@@ -18,6 +18,19 @@ const { confirmDialog } = require('./confirm-dialog.js');
 const { openCircleEditor } = require('./circle-editor.js');
 const { displayRgCode } = require('./db.js');
 
+/**
+ * getElementById that throws a specific, immediately-diagnosable error
+ * instead of returning null and letting some later line fail with a
+ * generic "Cannot read properties of null" pointing at the wrong place.
+ */
+function requireEl(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    throw new Error(`EditPanel: #${id} not found in the DOM (readyState: ${document.readyState})`);
+  }
+  return el;
+}
+
 // Fields shown in both tabs, in display order. Non-fullWidth fields are
 // paired two-per-row (reusing the .edit-row/.edit-field layout already
 // used for Product Code/Path); fullWidth fields get their own row.
@@ -52,26 +65,29 @@ class EditPanel {
     this.onDeleteCircle = onDeleteCircle; // (circleId) => Promise
 
     this.emptyStateEl = null; // no longer a separate element; #edit-content itself now shows an empty/grayed state
-    this.contentEl = document.getElementById('edit-content');
-    this.toggleBtn = document.getElementById('edit-toggle-btn');
-    this.applyBtn = document.getElementById('edit-apply-btn');
-    this.downloadBtn = document.getElementById('edit-download-btn');
+    this.contentEl = requireEl('edit-content');
+    this.toggleBtn = requireEl('edit-toggle-btn');
+    this.applyBtn = requireEl('edit-apply-btn');
+    this.downloadBtn = requireEl('edit-download-btn');
 
-    this.productCodeEl = document.getElementById('field-productcode');
-    this.pathTextEl = document.getElementById('field-path-text');
+    this.productCodeEl = requireEl('field-productcode');
+    this.pathTextEl = requireEl('field-path-text');
 
-    this.imageStripEl = document.getElementById('image-strip');
-    this.overlayEl = document.getElementById('image-preview-overlay');
-    this.overlayImgEl = document.getElementById('image-preview-img');
+    this.imageStripEl = requireEl('image-strip');
+    this.overlayEl = requireEl('image-preview-overlay');
+    this.overlayImgEl = requireEl('image-preview-img');
 
     this.tabButtons = Array.from(document.querySelectorAll('.edit-tab'));
-    this.modifiedPane = document.getElementById('edit-tab-modified');
-    this.originalPane = document.getElementById('edit-tab-original');
+    if (this.tabButtons.length === 0) {
+      throw new Error('EditPanel: no .edit-tab elements found in the DOM');
+    }
+    this.modifiedPane = requireEl('edit-tab-modified');
+    this.originalPane = requireEl('edit-tab-original');
 
-    this.launcherCheckbox = document.getElementById('launcher-enabled-checkbox');
-    this.launcherInput = document.getElementById('launcher-input');
-    this.launchParamsCheckbox = document.getElementById('launch-params-enabled-checkbox');
-    this.launchParamsInput = document.getElementById('launch-params-input');
+    this.launcherCheckbox = requireEl('launcher-enabled-checkbox');
+    this.launcherInput = requireEl('launcher-input');
+    this.launchParamsCheckbox = requireEl('launch-params-enabled-checkbox');
+    this.launchParamsInput = requireEl('launch-params-input');
 
     this.currentRecord = null;
     this.editing = false;

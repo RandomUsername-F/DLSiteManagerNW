@@ -2,6 +2,20 @@
 // Single entry point, loaded via <script src="system/app.js" defer> in
 // index.html. Everything else is require()'d as a plain CommonJS module.
 //
+// Observed on NW.js 0.116.0 (page origin was chrome-extension://..., not
+// file://): require()'d CommonJS modules could see a `document`/`window`
+// global that LOOKED valid (same innerHTML when serialized) but didn't
+// resolve getElementById() against the live page tree, even though this
+// script's own top-level `document` worked fine. Forcing Node's global
+// object to point at the real window/document, before any require() runs,
+// makes every required module see the same real references this script
+// does. If this turns out not to be necessary on your setup, it's a no-op
+// (window/document already deferred to these same values in that case).
+if (typeof global !== 'undefined') {
+  global.window = window;
+  global.document = document;
+}
+
 // NOTE ON PATHS: require() calls made from a <script src> tag (as opposed
 // to from within an already-required module) resolve relative to the main
 // HTML document's folder (the app root), not relative to this script's own
@@ -28,7 +42,35 @@ const { openSettingsWindow } = requireModule('./system/settings-window.js', './s
 // the app would launch permanently invisible.
 const win = nw.Window.get();
 
-document.addEventListener('DOMContentLoaded', () => {
+// Using a plain 'DOMContentLoaded' listener here previously produced a
+// real bug: if that event had already fired by the time this script's
+// listener got attached (observed happening in practice, even though this
+// script sits at the very end of <body>), the callback would simply never
+// run - and every element lookup after it would see an apparently "empty"
+// document. This checks document.readyState first and runs immediately if
+// the DOM is already parsed, instead of only ever waiting for an event
+// that may already be in the past.
+function whenDomReady(callback) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', callback);
+  } else {
+    callback();
+  }
+}
+
+whenDomReady(() => {
+  // --- TEMPORARY DIAGNOSTIC ---
+  // Reports exactly what document is loaded and what's actually inside
+  // #edit-panel at the moment this runs, to find out whether the wrong
+  // page is loaded, #edit-panel itself is missing, or #edit-content
+  // specifically got lost/renamed inside it. Remove once this is solved.
+  console.log('[diag] location.href =', location.href);
+  console.log('[diag] document.title =', document.title);
+  const diagPanel = document.getElementById('edit-panel');
+  console.log('[diag] #edit-panel found?', !!diagPanel);
+  console.log('[diag] #edit-panel.innerHTML =', diagPanel ? diagPanel.innerHTML : '(n/a - #edit-panel itself is missing)');
+  // --- END TEMPORARY DIAGNOSTIC ---
+
   restoreWindowBounds()
     .catch(err => console.error('Window bounds restore failed:', err))
     .finally(() => win.show());
@@ -103,7 +145,10 @@ async function initSplitter() {
 // ---------------------------------------------------------------
 function initSettingsMenu() {
   const settingsBtn = document.getElementById('menu-settings-btn');
-  if (!settingsBtn) return;
+  if (!settingsBtn) {
+    console.error('initSettingsMenu: #menu-settings-btn not found in the DOM.');
+    return;
+  }
 
   settingsBtn.addEventListener('click', () => {
     openSettingsWindow({
