@@ -6,10 +6,6 @@
 // DLSite scraping, or the perf-tuning knobs those tabs controlled).
 //
 // SIMPLIFICATIONS / NOT-YET-LIVE, flagged rather than silent:
-// - "Desktop resolution while running games" is a preset dropdown; nothing
-//   actually changes the display resolution yet - that was a native
-//   Windows API call (ChangeDisplaySettings) the old app made, which this
-//   app doesn't do.
 // - "List font" is a plain family-name + size pair, not a true native
 //   font-chooser dialog - the web platform doesn't expose one the way
 //   WinForms' FontDialog did.
@@ -17,6 +13,9 @@
 //   wrap, tile font) don't yet have a visible effect on the table, since
 //   the table/tile rendering hasn't been built to read them yet. They
 //   still load/save correctly for when that catches up.
+// - The exclusion list is read by system/library-import.js when scanning
+//   for game folders/executables (Action menu, drag-drop); it has no
+//   effect anywhere else yet.
 //
 // openSettingsWindow({ getSettings, saveSettings, browseFolder })
 //   getSettings()          -> Promise<Settings|undefined>
@@ -29,13 +28,13 @@
 // it explicitly instead. This `const` shadows the unreliable global for
 // the rest of this file.
 const document = require('./dom-bridge.js').getDocument();
+const { DEFAULT_EXCLUSION_LIST } = require('./library-import.js');
 
 const DEFAULT_SETTINGS = {
   general: {
     gameFolder: '',
     moveGamesOption: 'ask',       // 'always' | 'never' | 'ask'
-    postExtractionAction: 'ask',  // 'delete' | 'rename' | 'ask' | 'nothing'
-    resolution: 'none',           // 'none' | 'ask' | '<width>x<height>'
+    exclusionList: DEFAULT_EXCLUSION_LIST,
     renameTemplate: '{rjcode} [{circle}] {title}',
     renameOrganize: false
   },
@@ -56,8 +55,6 @@ const DEFAULT_SETTINGS = {
     listFontSize: 12
   }
 };
-
-const RESOLUTION_PRESETS = ['1920x1080', '1600x900', '1366x768', '1280x720', '1024x768'];
 
 function openSettingsWindow({ getSettings, saveSettings, browseFolder }) {
   return new Promise((resolve) => {
@@ -123,12 +120,6 @@ function mergeDefaults(saved) {
 }
 
 function buildMarkup(s) {
-  const resolutionOptions = ['none', 'ask', ...RESOLUTION_PRESETS].map(value => {
-    const label = value === 'none' ? "Don't change" : value === 'ask' ? 'Ask each time' : value;
-    const selected = s.general.resolution === value ? ' selected' : '';
-    return `<option value="${value}"${selected}>${label}</option>`;
-  }).join('');
-
   return `
     <h2 class="settings-title">Settings</h2>
     <nav class="settings-tabs">
@@ -153,16 +144,9 @@ function buildMarkup(s) {
         </fieldset>
 
         <fieldset class="settings-group">
-          <legend>Desktop resolution while running games</legend>
-          <select id="settings-resolution" class="settings-input">${resolutionOptions}</select>
-        </fieldset>
-
-        <fieldset class="settings-group">
-          <legend>After successfully extracting a CG archive</legend>
-          <label class="settings-radio"><input type="radio" name="settings-extract" value="delete" ${s.general.postExtractionAction === 'delete' ? 'checked' : ''}> Delete archive</label>
-          <label class="settings-radio"><input type="radio" name="settings-extract" value="nothing" ${s.general.postExtractionAction === 'nothing' ? 'checked' : ''}> Neither</label>
-          <label class="settings-radio"><input type="radio" name="settings-extract" value="ask" ${s.general.postExtractionAction === 'ask' ? 'checked' : ''}> Ask</label>
-          <label class="settings-radio"><input type="radio" name="settings-extract" value="rename" ${s.general.postExtractionAction === 'rename' ? 'checked' : ''}> Rename archive</label>
+          <legend>Exclusion list</legend>
+          <p class="settings-hint">File/folder names to skip when scanning for game executables (e.g. installers, uninstallers, crash handlers). Pipe-separated.</p>
+          <textarea id="settings-exclusion-list" class="settings-input" rows="3">${escapeHtml(s.general.exclusionList)}</textarea>
         </fieldset>
 
         <fieldset class="settings-group">
@@ -223,8 +207,7 @@ function buildMarkup(s) {
 function applyValues(box, s) {
   box.querySelector('#settings-game-folder').value = s.general.gameFolder;
   box.querySelector(`input[name="settings-move"][value="${s.general.moveGamesOption}"]`).checked = true;
-  box.querySelector('#settings-resolution').value = s.general.resolution;
-  box.querySelector(`input[name="settings-extract"][value="${s.general.postExtractionAction}"]`).checked = true;
+  box.querySelector('#settings-exclusion-list').value = s.general.exclusionList;
   box.querySelector('#settings-rename-template').value = s.general.renameTemplate;
   box.querySelector('#settings-rename-organize').checked = s.general.renameOrganize;
 
@@ -249,8 +232,7 @@ function readValues(box) {
     general: {
       gameFolder: box.querySelector('#settings-game-folder').value,
       moveGamesOption: box.querySelector('input[name="settings-move"]:checked').value,
-      postExtractionAction: box.querySelector('input[name="settings-extract"]:checked').value,
-      resolution: box.querySelector('#settings-resolution').value,
+      exclusionList: box.querySelector('#settings-exclusion-list').value,
       renameTemplate: box.querySelector('#settings-rename-template').value,
       renameOrganize: box.querySelector('#settings-rename-organize').checked
     },
@@ -275,6 +257,13 @@ function readValues(box) {
 
 function escapeAttr(str) {
   return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 module.exports = { openSettingsWindow, DEFAULT_SETTINGS };

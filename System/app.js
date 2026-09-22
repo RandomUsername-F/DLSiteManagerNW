@@ -32,6 +32,8 @@ const { getAllGames, getGameRecord, updateGameOverride, updateGameFields, getAll
 const { GameTable } = requireModule('./system/table.js', './table.js');
 const { EditPanel } = requireModule('./system/edit-panel.js', './edit-panel.js');
 const { openSettingsWindow } = requireModule('./system/settings-window.js', './settings-window.js');
+const { confirmDialog } = requireModule('./system/confirm-dialog.js', './confirm-dialog.js');
+const libraryImport = requireModule('./system/library-import.js', './library-import.js');
 
 // The window is created hidden (package.json "window.show": false) so we
 // can restore its saved position/size first and avoid a flash of the
@@ -63,6 +65,8 @@ whenDomReady(() => {
   initSplitter().catch(err => console.error('Splitter init failed:', err));
   initTable().catch(err => console.error('Table init failed:', err));
   initSettingsMenu();
+  initActionMenu();
+  initDragDrop();
 });
 
 // ---------------------------------------------------------------
@@ -180,13 +184,179 @@ function browseFolder() {
 }
 
 // ---------------------------------------------------------------
+// Action menu (menu bar → Action): Add executable / Add directory /
+// Find duplicates / Rebuild index. Built fresh as a floating menu on
+// every click (same approach as the column-visibility menu in
+// system/table.js) rather than a static dropdown in the markup - so
+// there's no separate dropdown element that can go missing from the DOM.
+// All four items ultimately call into system/library-import.js, which
+// does the actual scan/prompt/add work.
+// ---------------------------------------------------------------
+function initActionMenu() {
+  const actionBtn = document.getElementById('menu-action-btn');
+  if (!actionBtn) {
+    console.error('initActionMenu: #menu-action-btn not found in the DOM.');
+    return;
+  }
+
+  const ACTIONS = [
+    { label: 'Add executable', run: runAddExecutable },
+    { label: 'Add directory', run: runAddDirectory },
+    { label: 'Find duplicates', run: runFindDuplicates },
+    { label: 'Rebuild index', run: runRebuildIndex }
+  ];
+
+  let openMenuEl = null;
+
+  function closeMenu() {
+    if (openMenuEl) {
+      openMenuEl.remove();
+      openMenuEl = null;
+    }
+  }
+
+  actionBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (openMenuEl) {
+      closeMenu();
+      return;
+    }
+
+    const rect = actionBtn.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'menu-dropdown';
+    menu.style.left = rect.left + 'px';
+    menu.style.top = rect.bottom + 'px';
+
+    for (const action of ACTIONS) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'menu-dropdown-item';
+      item.textContent = action.label;
+      item.addEventListener('click', () => {
+        closeMenu();
+        action.run();
+      });
+      menu.appendChild(item);
+    }
+
+    document.body.appendChild(menu);
+    openMenuEl = menu;
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (openMenuEl && !openMenuEl.contains(e.target) && e.target !== actionBtn) {
+      closeMenu();
+    }
+  });
+}
+
+async function runAddExecutable() {
+  const exePaths = await browseExecutables();
+  if (!exePaths.length) return;
+  await libraryImport.addFromExecutablePaths(exePaths);
+  await refreshGames();
+}
+
+async function runAddDirectory() {
+  const dir = await browseFolder();
+  if (!dir) return;
+  await libraryImport.addFromDirectoryPaths([dir]);
+  await refreshGames();
+}
+
+async function runFindDuplicates() {
+  const dir = await browseFolder();
+  if (!dir) return;
+  await libraryImport.findDuplicates(dir); // shows its own report modal
+}
+
+async function runRebuildIndex() {
+  const confirmed = await confirmDialog(
+    "This reloads every game from its JSON backup under Database/Games, replacing what's currently in the database. Continue?",
+    { okLabel: 'Rebuild', cancelLabel: 'Cancel' }
+  );
+  if (!confirmed) return;
+  await libraryImport.rebuildIndex();
+  await refreshGames();
+}
+
+/** Same native-picker trick as browseFolder(), but a normal multi-select file input filtered to .exe. */
+function browseExecutables() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.exe';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', () => {
+      const paths = Array.from(input.files).map(f => f.path).filter(Boolean);
+      resolve(paths);
+      input.remove();
+    }, { once: true });
+
+    window.addEventListener('focus', function onFocus() {
+      window.removeEventListener('focus', onFocus);
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          resolve([]);
+          input.remove();
+        }
+      }, 300);
+    }, { once: true });
+
+    input.click();
+  });
+}
+
+// ---------------------------------------------------------------
+// Drag-and-drop onto the list panel: same processing as the menu
+// actions, routed automatically by whether each dropped path is a file
+// or a directory (system/library-import.js's addFromDroppedPaths).
+// ---------------------------------------------------------------
+function initDragDrop() {
+  const listPanel = document.getElementById('list-panel');
+  if (!listPanel) {
+    console.error('initDragDrop: #list-panel not found in the DOM.');
+    return;
+  }
+
+  listPanel.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    listPanel.classList.add('is-drag-over');
+  });
+
+  listPanel.addEventListener('dragleave', (e) => {
+    if (!listPanel.contains(e.relatedTarget)) {
+      listPanel.classList.remove('is-drag-over');
+    }
+  });
+
+  listPanel.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    listPanel.classList.remove('is-drag-over');
+
+    // NW.js exposes the real filesystem path of a dropped file as
+    // File.path (not available on dropped files in a normal sandboxed
+    // browser context - this only works because of NW.js's Node access).
+    const paths = Array.from(e.dataTransfer.files).map(f => f.path).filter(Boolean);
+    if (!paths.length) return;
+
+    await libraryImport.addFromDroppedPaths(paths);
+    await refreshGames();
+  });
+}
+
+// ---------------------------------------------------------------
 // Game table
 // ---------------------------------------------------------------
 let editPanel;
+let table;
 
 async function initTable() {
   const tableEl = document.getElementById('game-table');
-  const statusEl = document.querySelector('#status-bar span');
 
   editPanel = new EditPanel({
     fetchRecord: getGameRecord,
@@ -198,7 +368,7 @@ async function initTable() {
   });
   editPanel.show(null); // renders the empty/grayed field layout before anything is selected
 
-  const table = new GameTable({
+  table = new GameTable({
     container: tableEl,
     onColumnsChanged: (state) => setSetting('ui.columns', state),
     onSortChanged: (sort) => setSetting('ui.sort', sort),
@@ -218,13 +388,19 @@ async function initTable() {
   table.applyColumnState(savedColumns);
   table.applySort(savedSort);
 
-  const games = await getAllGames();
   table.render();
+  await refreshGames();
+  // Empty state (no games yet) renders as a message row inside the table
+  // body itself (see system/table.js renderBody) so the header stays put.
+}
+
+/** Re-fetches the game list and re-renders the table + status bar. Called once after startup, and again after any add/import finishes. */
+async function refreshGames() {
+  const games = await getAllGames();
   table.setRows(games);
 
+  const statusEl = document.querySelector('#status-bar span');
   if (statusEl) {
     statusEl.textContent = `${games.length} game${games.length === 1 ? '' : 's'} catalogued`;
   }
-  // Empty state (no games yet) renders as a message row inside the table
-  // body itself (see system/table.js renderBody) so the header stays put.
 }

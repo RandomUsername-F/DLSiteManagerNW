@@ -79,6 +79,41 @@ body {
   color: var(--text);
 }
 
+.menu-item-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.menu-dropdown {
+  position: fixed;
+  z-index: 15;
+  min-width: 170px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.menu-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.menu-dropdown-item:hover {
+  background: var(--accent-soft);
+}
+
 /* ---------------------------------------------------------------
    Workspace: list panel (left) + edit panel (right)
 ------------------------------------------------------------------ */
@@ -94,6 +129,23 @@ body {
   flex-direction: column;
   min-width: 0;
   border-right: 1px solid var(--border);
+  position: relative;
+}
+
+#list-panel.is-drag-over::after {
+  content: "Drop to add";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(176, 71, 44, 0.14);
+  border: 2px dashed var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-display);
+  font-size: 16px;
+  pointer-events: none;
 }
 
 #table-scroll {
@@ -892,6 +944,12 @@ body {
   padding: 5px 7px;
 }
 
+textarea.settings-input {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
 .settings-group input[type="number"],
 .settings-subgroup input[type="number"] {
   background: var(--bg);
@@ -934,6 +992,60 @@ body {
 
 .settings-buttons {
   flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------
+   Report modal (Find duplicates results)
+------------------------------------------------------------------ */
+.report-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 480px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.report-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.report-list {
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+
+.report-list-item {
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.report-list-item:last-child {
+  border-bottom: none;
+}
+
+.report-list-item .report-path {
+  display: block;
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.report-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 10px 2px 14px;
 }
 
 /* ---------------------------------------------------------------

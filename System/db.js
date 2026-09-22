@@ -124,6 +124,31 @@ async function getGameRecord(productCode) {
   return db.games.get(productCode);
 }
 
+/** True if a game with this exact productCode is already in the library. */
+async function gameExists(productCode) {
+  const record = await db.games.get(productCode);
+  return !!record;
+}
+
+/**
+ * Creates a minimal stub record for a newly added game - just enough to
+ * show up in the list (productCode, path, addedDate). `original` starts
+ * empty; system/parser.js (once implemented) is what fills it in, either
+ * right after adding or later via the "Download info" button.
+ */
+async function addGame({ productCode, path }) {
+  const record = {
+    productCode,
+    path,
+    addedDate: new Date().toISOString(),
+    images: { thumb: null, gallery: [] },
+    original: {},
+    override: {}
+  };
+  await db.games.add(record);
+  return record;
+}
+
 /** Merges the given fields into a game's override object and returns the updated record. */
 async function updateGameOverride(productCode, overridePatch) {
   const record = await db.games.get(productCode);
@@ -307,6 +332,8 @@ module.exports = {
   resolveGame,
   getAllGames,
   getGameRecord,
+  gameExists,
+  addGame,
   updateGameOverride,
   updateGameFields,
   getAllCircles,
