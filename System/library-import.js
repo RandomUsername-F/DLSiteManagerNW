@@ -14,6 +14,7 @@ const scanner = require('./game-scanner.js');
 const { confirmDialog } = require('./confirm-dialog.js');
 const { showReport } = require('./report-modal.js');
 const { fetchGameInfo } = require('./dlsite_parser.js');
+const { downloadGameImages } = require('./image-downloader.js');
 const db = require('./db.js');
 
 const DEFAULT_EXCLUSION_LIST =
@@ -141,12 +142,12 @@ async function processCandidate({ folderPath, productCode }, options) {
  * Writes parsed data into `original` (never `override`, which is
  * exclusively the user's own edits) and resolves/creates the circle by
  * name+rgCode the same way db.seedFromBackups() does for JSON backups.
- *
- * NOTE: info.images (see dlsite_parser.js) is remote URLs, not local
- * files - actually downloading and saving them under
- * Database/Games/DLsite/<code>/images/ isn't implemented yet, so that
- * part of the parse result is intentionally not persisted here. Logged
- * rather than silently dropped.
+ * Also downloads any image URLs the parser found (system/image-
+ * downloader.js) and, if any of them actually succeeded, updates the
+ * game's local images.thumb/images.gallery to match - a fully failed
+ * download batch leaves the existing local images untouched, same
+ * "never overwrite good data with bad" rule dlsite_parser.js follows for
+ * every other field.
  */
 async function applyParsedInfo(productCode, info) {
   const record = await db.getGameRecord(productCode);
@@ -170,11 +171,22 @@ async function applyParsedInfo(productCode, info) {
     original.circleId = existing ? existing.circleId : await db.saveCircle(info.circle);
   }
 
-  await db.db.games.update(productCode, { original });
+  const patch = { original };
 
-  if (info.images && (info.images.thumbUrl || (info.images.galleryUrls || []).length)) {
-    console.warn('applyParsedInfo:', productCode, 'has image URLs from the parser, but downloading/saving images to disk is not implemented yet - skipped.');
+  if (info.images) {
+    try {
+      const newImages = await downloadGameImages(productCode, info.images, record.images);
+      if (newImages) patch.images = newImages;
+    } catch (e) {
+      console.error('Image download failed for', productCode, e);
+      // Same rule as everywhere else here: a failed download step must
+      // never block the rest of the update, and must never wipe out
+      // whatever images already existed.
+    }
   }
+
+  await db.db.games.update(productCode, patch);
+  await db.saveGameBackup(productCode);
 }
 
 /**

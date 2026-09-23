@@ -137,11 +137,7 @@ _bindStaticHandlers() {
       this._showOverlay();
     });
 
-    this.imageStripEl.addEventListener('mouseleave', (e) => {
-      // Don't hide if the mouse moved onto the overlay itself.
-      if (e.relatedTarget && this.overlayEl.contains(e.relatedTarget)) return;
-      this._hideOverlay();
-    });
+    this.imageStripEl.addEventListener('mouseleave', () => { this._hideOverlay(); });
 
     this.overlayEl.addEventListener('mouseleave', () => this._hideOverlay());
 
@@ -310,12 +306,17 @@ _bindStaticHandlers() {
 
   _showOverlay() {
     if (!this._previewImages || !this._previewImages.length) return;
-    const listPanelRect = document.getElementById('list-panel').getBoundingClientRect();
+
+    const listPanelRect = document
+      .getElementById('list-panel')
+      .getBoundingClientRect();
+
     this.overlayEl.style.left = listPanelRect.left + 'px';
     this.overlayEl.style.top = listPanelRect.top + 'px';
     this.overlayEl.style.width = listPanelRect.width + 'px';
     this.overlayEl.style.height = listPanelRect.height + 'px';
-    this.overlayEl.hidden = false;
+
+    this.overlayEl.classList.add('visible');
     this._updateOverlayImage();
   }
 
@@ -324,7 +325,8 @@ _bindStaticHandlers() {
   }
 
   _hideOverlay() {
-    this.overlayEl.hidden = true;
+    this.overlayEl.classList.remove('visible');
+    this.overlayImgEl.removeAttribute('src');
   }
 
   // ---------------------------------------------------------------

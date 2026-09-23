@@ -385,11 +385,16 @@ body {
 #image-preview-overlay {
   position: fixed;
   z-index: 20;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(10, 11, 14, 0.92);
   border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+#image-preview-overlay.visible {
+  display: flex;
 }
 
 #image-preview-overlay img {

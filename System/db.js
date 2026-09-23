@@ -48,8 +48,14 @@
 //   circles: { circleId: 1, name: "Falcom", rgCode: "VG01562" }
 
 const Dexie = require('dexie');
+const fs = require('fs');
+const path = require('path');
 
 const db = new Dexie('DLSiteManager');
+
+// Root folder for per-game JSON/image backups - see saveGameBackup() and
+// seedFromBackups() below.
+const GAMES_ROOT = path.join(__dirname, '..', 'Database', 'Games', 'DLsite');
 
 db.version(1).stores({
   // productCode (e.g. "RJ012345") is the primary key, matching the folder
@@ -146,7 +152,63 @@ async function addGame({ productCode, path }) {
     override: {}
   };
   await db.games.add(record);
+  await saveGameBackup(productCode);
   return record;
+}
+
+/**
+ * Writes/updates the portable JSON backup for one game under
+ * Database/Games/DLsite/<productCode>/info.json - see seedFromBackups()
+ * for the reverse direction. Called after every mutation (add, override
+ * edits, launcher settings, parsed data) so the backup stays a live
+ * mirror of the database rather than just a one-time snapshot. Failures
+ * are logged, not thrown - a backup write failing should never block the
+ * actual database change that triggered it.
+ */
+async function saveGameBackup(productCode) {
+  const record = await db.games.get(productCode);
+  if (!record) return;
+
+  try {
+    const circles = await db.circles.toArray();
+    const circleById = new Map(circles.map(c => [c.circleId, c]));
+
+    const payload = {
+      productCode: record.productCode,
+      path: record.path,
+      addedDate: record.addedDate,
+      images: record.images,
+      launcher: record.launcher,
+      launchParameters: record.launchParameters,
+      original: toPortableFieldSet(record.original, circleById),
+      override: toPortableFieldSet(record.override, circleById)
+    };
+
+    const folder = path.join(GAMES_ROOT, productCode);
+    fs.mkdirSync(path.join(folder, 'images'), { recursive: true });
+    fs.writeFileSync(path.join(folder, 'info.json'), JSON.stringify(payload, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to write backup JSON for', productCode, e);
+  }
+}
+
+/**
+ * original/override use a local circleId (see the header comment); the
+ * portable backup format uses an embedded {name, rgCode} instead, the
+ * same shape seedFromBackups() expects on the way back in.
+ */
+function toPortableFieldSet(fieldSet, circleById) {
+  if (!fieldSet) return fieldSet;
+
+  const rest = Object.assign({}, fieldSet);
+  const circleId = rest.circleId;
+  delete rest.circleId;
+
+  if (circleId != null) {
+    const circle = circleById.get(circleId);
+    if (circle) rest.circle = { name: circle.name, rgCode: circle.rgCode };
+  }
+  return rest;
 }
 
 /** Merges the given fields into a game's override object and returns the updated record. */
@@ -156,6 +218,7 @@ async function updateGameOverride(productCode, overridePatch) {
 
   record.override = Object.assign({}, record.override, overridePatch);
   await db.games.put(record);
+  await saveGameBackup(productCode);
   return record;
 }
 
@@ -167,6 +230,7 @@ async function updateGameOverride(productCode, overridePatch) {
  */
 async function updateGameFields(productCode, patch) {
   await db.games.update(productCode, patch);
+  await saveGameBackup(productCode);
 }
 
 // ---------------------------------------------------------------
@@ -260,22 +324,18 @@ async function setSetting(key, value) {
  *   require('./system/db.js').seedFromBackups().then(n => console.log(n, 'games loaded'))
  */
 async function seedFromBackups() {
-  const fs = require('fs');
-  const path = require('path');
-
-  const gamesRoot = path.join(__dirname, '..', 'Database', 'Games', 'DLsite');
-  if (!fs.existsSync(gamesRoot)) {
-    console.warn('No Database/Games/DLsite folder found at', gamesRoot);
+  if (!fs.existsSync(GAMES_ROOT)) {
+    console.warn('No Database/Games/DLsite folder found at', GAMES_ROOT);
     return 0;
   }
 
-  const codes = fs.readdirSync(gamesRoot, { withFileTypes: true })
+  const codes = fs.readdirSync(GAMES_ROOT, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name);
 
   const records = [];
   for (const code of codes) {
-    const infoPath = path.join(gamesRoot, code, 'info.json');
+    const infoPath = path.join(GAMES_ROOT, code, 'info.json');
     if (!fs.existsSync(infoPath)) continue;
     try {
       records.push(JSON.parse(fs.readFileSync(infoPath, 'utf8')));
@@ -334,6 +394,7 @@ module.exports = {
   getGameRecord,
   gameExists,
   addGame,
+  saveGameBackup,
   updateGameOverride,
   updateGameFields,
   getAllCircles,
