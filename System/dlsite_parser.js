@@ -133,9 +133,17 @@ function buildProductUrl(productCode) {
 function fetchPage(url, maxRedirects) {
   if (maxRedirects === undefined) maxRedirects = 5;
 
+  // Reads the language variable set elsewhere (e.g., 'en_US', 'ja_JP', 'zh_TW')
+  const locale = process.env.DLSITE_LOCALE;
+  const headers = { 'User-Agent': 'Mozilla/5.0' };
+  
+  if (locale) {
+    headers['Cookie'] = `locale=${locale};`;
+  }
+
   return new Promise((resolve, reject) => {
     function get(currentUrl, redirectsLeft) {
-      const req = https.get(currentUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+      const req = https.get(currentUrl, { headers }, (res) => {
         const statusCode = res.statusCode;
 
         if ([301, 302, 303, 307, 308].includes(statusCode) && res.headers.location) {

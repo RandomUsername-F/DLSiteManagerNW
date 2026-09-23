@@ -47,18 +47,12 @@ const EDIT_FIELDS = [
   { id: 'language', label: 'Language', type: 'text' },
   { id: 'engine', label: 'Engine', type: 'text' },
   { id: 'version', label: 'Version', type: 'text' },
-  { id: 'sizeBytes', label: 'Size', type: 'size' },
-  { id: 'rating', label: 'Rating', type: 'stars', readOnly: true },
+  { id: 'sizeBytes', label: 'Size', type: 'size', readOnly: true },
   { id: 'dlsiteRating', label: 'DLSite Rating', type: 'stars', gold: true, readOnly: true },
-  { id: 'timesPlayed', label: 'Times Played', type: 'number' },
-  { id: 'secondsPlayed', label: 'Time Played', type: 'duration' },
-  { id: 'lastPlayedDate', label: 'Last Played', type: 'date' },
+  { id: 'lastPlayedDate', label: 'Last Played', type: 'date', readOnly: true },
   { id: 'releaseDate', label: 'Released', type: 'date' },
   { id: 'tags', label: 'Tags', type: 'list' },
-  { id: 'hvdbTags', label: 'HVDB Tags', type: 'list' },
-  { id: 'cvs', label: 'CVs', type: 'list' },
-  { id: 'description', label: 'Description', type: 'textarea', fullWidth: true, collapsible: true },
-  { id: 'comments', label: 'Comments', type: 'textarea', fullWidth: true }
+  { id: 'description', label: 'Description', type: 'textarea', fullWidth: true, collapsible: true }
 ];
 
 class EditPanel {

@@ -5,27 +5,102 @@
    amount of gold reserved strictly for star ratings.
 ------------------------------------------------------------------ */
 :root {
-  --bg:            #14171c;
-  --panel:         #1b1f26;
-  --panel-alt:     #20242c;
-  --border:        #2b303a;
-  --border-soft:   #232830;
+    --bg: #14171c;
+    --panel: #1b1f26;
+    --panel-alt: #20242c;
+    --border: #424750;
+    --border-soft: #232830;
+    
+    --text: #fff;
+    --text-muted: #8a8a8a;
+    --text-faint: #8ab0fa;
 
-  --text:          #e7e3d8;
-  --text-muted:    #8d93a0;
-  --text-faint:    #5b6270;
+    --accent: #b0472c;
+    --accent-soft: rgba(176, 71, 44, 0.16);
+    --accent-text: #e9a58e;
 
-  --accent:        #b0472c;
-  --accent-soft:   rgba(176, 71, 44, 0.16);
-  --accent-text:   #e9a58e;
+    --gold: #f8d725eb;
+    --gold-dim: #4a3c19;
 
-  --gold:          #c9a24a;
-  --gold-dim:      #4a4331;
+    --scrollbar-track: #a0a0a0;
+    --scrollbar-thumb: #000000be;
+    --scrollbar-hover: #515c6e;
+    --scrollbar-corner: #14171c;
 
-  --font-display:  Georgia, "Hiragino Mincho ProN", "Yu Mincho", serif;
-  --font-ui:       -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --font-display: Georgia, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --font-ui: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
 
-  --radius:        3px;
+    --radius: 3px;
+}
+
+/* Width and height of the scrollbar tracks */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Scrollbar Track (Background) */
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+/* Scrollbar Thumb (Draggable handle) */
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+}
+
+/* Hover state for the thumb */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+/* Scrollbar Corner (where horizontal and vertical bars meet) */
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+#titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background-color: var(--bg);
+  color: var(--text);
+  user-select: none;
+  -webkit-app-region: drag; 
+}
+
+.title {
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+.window-controls {
+  display: flex;
+  -webkit-app-region: no-drag; 
+  position: relative;
+  z-index: 9999;
+}
+
+.window-controls button {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  width: 45px;
+  height: 32px;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  z-index: 9999;
+}
+
+.window-controls button:hover {
+  background-color: #333333;
+}
+
+.window-controls #btn-close:hover {
+  background-color: #e81123;
 }
 
 * {
@@ -631,7 +706,7 @@ body {
 
 .edit-field {
   margin-bottom: 12px;
-  padding-bottom: 12px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -702,7 +777,8 @@ body {
 
 .edit-row {
   display: flex;
-  gap: 16px;
+  gap: 1px;
+  /*flex-direction: column;*/
 }
 
 .edit-row .edit-field {

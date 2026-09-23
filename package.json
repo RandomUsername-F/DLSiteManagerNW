@@ -12,7 +12,8 @@
     "min_width": 800,
     "min_height": 500,
     "toolbar": false,
-    "show": false
+    "show": false,
+    "frame": false
   },
   "nodejs": true,
   "scripts": {

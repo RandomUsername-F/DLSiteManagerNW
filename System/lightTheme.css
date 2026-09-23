@@ -1,0 +1,32 @@
+:root {
+    /* Surfaces */
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel-alt: #eaedf2;
+
+    /* Borders */
+    --border: #d0d5dd;
+    --border-soft: #e4e7ec;
+
+    /* Text */
+    --text: #1a1d23;
+    --text-muted: #667085;
+    --text-faint: #255eb8;
+
+    /* Accent (Terracotta Red) */
+    --accent: #b0472c;
+    --accent-soft: rgba(176, 71, 44, 0.10);
+    --accent-text: #8c2e17;
+
+    /* Gold / Highlights */
+    --gold: #d99b00;
+    --gold-dim: #fef8e7;
+
+    /* Scrollbars */
+    --scrollbar-track: #e4e7ec;
+    --scrollbar-thumb: #98a2b3;
+    --scrollbar-hover: #667085;
+    --scrollbar-corner: #f4f5f7;
+
+    /* Fonts & Radii remain untouched */
+}
