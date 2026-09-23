@@ -454,7 +454,6 @@ _bindStaticHandlers() {
     if (inherited && rawValue != null && rawValue !== '') {
       const tag = document.createElement('span');
       tag.className = 'edit-inherited-tag';
-      tag.textContent = ' (from original)';
       p.appendChild(tag);
     }
     return p;
@@ -510,7 +509,6 @@ _bindStaticHandlers() {
     if (inherited && circle) {
       const tag = document.createElement('span');
       tag.className = 'edit-inherited-tag';
-      tag.textContent = ' (from original)';
       wrap.appendChild(tag);
     }
 

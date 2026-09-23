@@ -2,10 +2,10 @@
 // Orchestrates adding games to the library: resolving folders/product
 // codes from what the user picked or dropped (system/game-scanner.js),
 // prompting on ambiguous cases (no code found / code already exists),
-// creating the stub database record, and handing off to system/parser.js
-// (currently a no-op stub - see that file) to fill it in. This is the
-// only place that ties the scanner, confirmDialog, and the database
-// together; system/app.js just calls the functions exported here.
+// creating the stub database record, and handing off to
+// system/dlsite_parser.js to fill it in. This is the only place that
+// ties the scanner, confirmDialog, and the database together;
+// system/app.js just calls the functions exported here.
 
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ const path = require('path');
 const scanner = require('./game-scanner.js');
 const { confirmDialog } = require('./confirm-dialog.js');
 const { showReport } = require('./report-modal.js');
-const { fetchGameInfo } = require('./parser.js');
+const { fetchGameInfo } = require('./dlsite_parser.js');
 const db = require('./db.js');
 
 const DEFAULT_EXCLUSION_LIST =
@@ -124,10 +124,6 @@ async function processCandidate({ folderPath, productCode }, options) {
   const record = await db.addGame({ productCode, path: folderPath });
 
   try {
-    // system/parser.js is currently a stub that always returns null - see
-    // that file. This call is real and wired up; there's simply nothing
-    // for it to return yet. applyParsedInfo() below is where a real
-    // result gets merged in once the parser is implemented.
     const info = await fetchGameInfo(productCode);
     if (info) {
       await applyParsedInfo(productCode, info);
@@ -142,13 +138,15 @@ async function processCandidate({ folderPath, productCode }, options) {
 }
 
 /**
- * NOT YET EXERCISED (fetchGameInfo() always returns null right now) -
- * written ahead of time so wiring the real parser later is just "make
- * fetchGameInfo() return real data" rather than also having to design
- * this merge step at that point. Writes parsed data into `original`
- * (never `override, which is exclusively the user's own edits) and
- * resolves/creates the circle by name+rgCode the same way
- * db.seedFromBackups() does for JSON backups.
+ * Writes parsed data into `original` (never `override`, which is
+ * exclusively the user's own edits) and resolves/creates the circle by
+ * name+rgCode the same way db.seedFromBackups() does for JSON backups.
+ *
+ * NOTE: info.images (see dlsite_parser.js) is remote URLs, not local
+ * files - actually downloading and saving them under
+ * Database/Games/DLsite/<code>/images/ isn't implemented yet, so that
+ * part of the parse result is intentionally not persisted here. Logged
+ * rather than silently dropped.
  */
 async function applyParsedInfo(productCode, info) {
   const record = await db.getGameRecord(productCode);
@@ -173,6 +171,10 @@ async function applyParsedInfo(productCode, info) {
   }
 
   await db.db.games.update(productCode, { original });
+
+  if (info.images && (info.images.thumbUrl || (info.images.galleryUrls || []).length)) {
+    console.warn('applyParsedInfo:', productCode, 'has image URLs from the parser, but downloading/saving images to disk is not implemented yet - skipped.');
+  }
 }
 
 /**
