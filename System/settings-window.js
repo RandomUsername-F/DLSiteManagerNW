@@ -1,9 +1,8 @@
 // system/settings-window.js
-// Settings modal, opened from the "Settings" menu-bar button. Ported from
-// the old WinForms app's SettingsForm - but only the General and UI
-// Settings tabs, as instructed. Translator, DLSite, and Performance are
-// skipped entirely (this app doesn't do AGTH/ChiiTrans launching, live
-// DLSite scraping, or the perf-tuning knobs those tabs controlled).
+// Settings modal, opened from the "Settings" menu-bar button. General and
+// UI Settings tabs are ported from the old WinForms app (Translator,
+// DLSite, Performance skipped - not applicable here). Translation and
+// Custom are new.
 //
 // SIMPLIFICATIONS / NOT-YET-LIVE, flagged rather than silent:
 // - "List font" is a plain family-name + size pair, not a true native
@@ -17,10 +16,11 @@
 //   for game folders/executables (Action menu, drag-drop); it has no
 //   effect anywhere else yet.
 //
-// openSettingsWindow({ getSettings, saveSettings, browseFolder })
-//   getSettings()          -> Promise<Settings|undefined>
-//   saveSettings(settings) -> Promise
-//   browseFolder()         -> Promise<string|null>  (native folder picker)
+// openSettingsWindow({ getSettings, saveSettings, browseFolder, listTranslatorEngines })
+//   getSettings()            -> Promise<Settings|undefined>
+//   saveSettings(settings)   -> Promise
+//   browseFolder()           -> Promise<string|null>  (native folder picker)
+//   listTranslatorEngines()  -> string[] (script names found in settings/translator/)
 // Resolves to { cancelled: true } or { cancelled: false, settings }.
 
 // See system/dom-bridge.js: bare `document` isn't reliable inside a
@@ -53,10 +53,33 @@ const DEFAULT_SETTINGS = {
     applyListFontToTiles: false,
     listFontFamily: 'Segoe UI',
     listFontSize: 12
+  },
+  translation: {
+    parserLocale: 'en_US',        // sets process.env.DLSITE_LOCALE
+    translateFrom: 'ja',
+    translateTo: 'en',
+    translatorEngine: 'googleTranslator'
+  },
+  custom: {
+    theme: 'dark'                 // 'dark' | 'light'
   }
 };
 
-function openSettingsWindow({ getSettings, saveSettings, browseFolder }) {
+const PARSER_LOCALE_PRESETS = [
+  { value: 'en_US', label: 'English' },
+  { value: 'ja_JP', label: 'Japanese' },
+  { value: 'zh_CN', label: 'Chinese (Simplified)' },
+  { value: 'ko_KR', label: 'Korean' }
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: 'ja', label: 'Japanese' },
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'ko', label: 'Korean' }
+];
+
+function openSettingsWindow({ getSettings, saveSettings, browseFolder, listTranslatorEngines }) {
   return new Promise((resolve) => {
     build().catch((err) => {
       console.error('Failed to open settings window:', err);
@@ -65,13 +88,14 @@ function openSettingsWindow({ getSettings, saveSettings, browseFolder }) {
 
     async function build() {
       const current = mergeDefaults(await getSettings());
+      const engines = listTranslatorEngines ? listTranslatorEngines() : [];
 
       const overlay = document.createElement('div');
       overlay.className = 'confirm-overlay';
 
       const box = document.createElement('div');
       box.className = 'settings-box';
-      box.innerHTML = buildMarkup(current);
+      box.innerHTML = buildMarkup(current, engines);
       overlay.appendChild(box);
       document.body.appendChild(overlay);
 
@@ -91,6 +115,14 @@ function openSettingsWindow({ getSettings, saveSettings, browseFolder }) {
 
       box.querySelector('#settings-restore-defaults').addEventListener('click', () => {
         applyValues(box, { general: current.general, ui: DEFAULT_SETTINGS.ui });
+      });
+
+      // Parser language combo: picking a preset fills the text input,
+      // which remains the actual editable/stored value (the combo is
+      // just a convenience-filler, per spec - typing a custom value
+      // directly into the input always works too).
+      box.querySelector('#settings-locale-preset').addEventListener('change', (e) => {
+        if (e.target.value) box.querySelector('#settings-locale-input').value = e.target.value;
       });
 
       function close(result) {
@@ -115,16 +147,37 @@ function openSettingsWindow({ getSettings, saveSettings, browseFolder }) {
 function mergeDefaults(saved) {
   return {
     general: Object.assign({}, DEFAULT_SETTINGS.general, saved && saved.general),
-    ui: Object.assign({}, DEFAULT_SETTINGS.ui, saved && saved.ui)
+    ui: Object.assign({}, DEFAULT_SETTINGS.ui, saved && saved.ui),
+    translation: Object.assign({}, DEFAULT_SETTINGS.translation, saved && saved.translation),
+    custom: Object.assign({}, DEFAULT_SETTINGS.custom, saved && saved.custom)
   };
 }
 
-function buildMarkup(s) {
+function buildMarkup(s, engines) {
+  const localePresetOptions = ['', ...PARSER_LOCALE_PRESETS.map(p => p.value)].map(value => {
+    const preset = PARSER_LOCALE_PRESETS.find(p => p.value === value);
+    const label = preset ? preset.label : 'Choose a preset\u2026';
+    return `<option value="${value}">${label}</option>`;
+  }).join('');
+
+  const fromOptions = LANGUAGE_OPTIONS.map(o =>
+    `<option value="${o.value}"${s.translation.translateFrom === o.value ? ' selected' : ''}>${o.label}</option>`
+  ).join('');
+  const toOptions = LANGUAGE_OPTIONS.map(o =>
+    `<option value="${o.value}"${s.translation.translateTo === o.value ? ' selected' : ''}>${o.label}</option>`
+  ).join('');
+
+  const engineOptions = engines.length
+    ? engines.map(name => `<option value="${escapeAttr(name)}"${s.translation.translatorEngine === name ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')
+    : '<option value="">No scripts found in settings/translator/</option>';
+
   return `
     <h2 class="settings-title">Settings</h2>
     <nav class="settings-tabs">
       <button type="button" class="settings-tab is-active" data-tab="general">General</button>
       <button type="button" class="settings-tab" data-tab="ui">UI Settings</button>
+      <button type="button" class="settings-tab" data-tab="translation">Translation</button>
+      <button type="button" class="settings-tab" data-tab="custom">Custom</button>
     </nav>
 
     <div class="settings-body">
@@ -195,6 +248,41 @@ function buildMarkup(s) {
 
         <button type="button" class="btn" id="settings-restore-defaults">Restore defaults</button>
       </div>
+
+      <div class="settings-tab-pane" data-tab="translation">
+        <fieldset class="settings-group">
+          <legend>Parser language</legend>
+          <p class="settings-hint">Sets DLSITE_LOCALE, which the parser sends as the site's display language (affects text on the fetched page, not what's actually being scraped).</p>
+          <div class="settings-row">
+            <select id="settings-locale-preset" class="settings-input">${localePresetOptions}</select>
+            <input type="text" id="settings-locale-input" class="settings-input" value="${escapeAttr(s.translation.parserLocale)}">
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-group">
+          <legend>Translator</legend>
+          <div class="settings-row">
+            <label class="settings-inline-select">From
+              <select id="settings-translate-from" class="settings-input">${fromOptions}</select>
+            </label>
+            <label class="settings-inline-select">To
+              <select id="settings-translate-to" class="settings-input">${toOptions}</select>
+            </label>
+          </div>
+          <label class="settings-inline-select settings-engine-select">Engine
+            <select id="settings-translator-engine" class="settings-input">${engineOptions}</select>
+          </label>
+          <p class="settings-hint">Engines are scripts found in settings/translator/ - drop in your own (exporting an async translate(text, fromLang, toLang) function) to use a different translation service.</p>
+        </fieldset>
+      </div>
+
+      <div class="settings-tab-pane" data-tab="custom">
+        <fieldset class="settings-group">
+          <legend>Theme</legend>
+          <label class="settings-radio"><input type="radio" name="settings-theme" value="dark" ${s.custom.theme === 'dark' ? 'checked' : ''}> Dark (default)</label>
+          <label class="settings-radio"><input type="radio" name="settings-theme" value="light" ${s.custom.theme === 'light' ? 'checked' : ''}> Light</label>
+        </fieldset>
+      </div>
     </div>
 
     <div class="confirm-buttons settings-buttons">
@@ -251,6 +339,15 @@ function readValues(box) {
       applyListFontToTiles: box.querySelector('#settings-apply-font-tiles').checked,
       listFontFamily: box.querySelector('#settings-font-family').value || DEFAULT_SETTINGS.ui.listFontFamily,
       listFontSize: Number(box.querySelector('#settings-font-size').value) || DEFAULT_SETTINGS.ui.listFontSize
+    },
+    translation: {
+      parserLocale: box.querySelector('#settings-locale-input').value.trim() || DEFAULT_SETTINGS.translation.parserLocale,
+      translateFrom: box.querySelector('#settings-translate-from').value,
+      translateTo: box.querySelector('#settings-translate-to').value,
+      translatorEngine: box.querySelector('#settings-translator-engine').value || DEFAULT_SETTINGS.translation.translatorEngine
+    },
+    custom: {
+      theme: box.querySelector('input[name="settings-theme"]:checked').value
     }
   };
 }

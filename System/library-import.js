@@ -1,14 +1,15 @@
 // system/library-import.js
 // Orchestrates adding games to the library: resolving folders/product
-// codes from what the user picked or dropped (system/game-scanner.js),
-// prompting on ambiguous cases (no code found / code already exists),
-// creating the stub database record, and handing off to
-// system/dlsite_parser.js to fill it in. This is the only place that
-// ties the scanner, confirmDialog, and the database together;
-// system/app.js just calls the functions exported here.
+// codes/primary executables from what the user picked or dropped
+// (system/game-scanner.js), prompting on ambiguous cases, creating the
+// stub database record, and handing off to system/dlsite_parser.js +
+// system/image-downloader.js to fill it in. Also home to the other
+// per-game actions that share this same "fetch/scan + guard + write"
+// shape: check-for-updates, rename/organize, remove.
 
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns');
 
 const scanner = require('./game-scanner.js');
 const { confirmDialog } = require('./confirm-dialog.js');
@@ -26,24 +27,23 @@ async function getExclusionList() {
   return configured || DEFAULT_EXCLUSION_LIST;
 }
 
-/**
- * Processes a list of .exe paths (from "Add executable" or a file drop)
- * one at a time, in order - sequential on purpose, so a prompt for one
- * item is always resolved before the next one's is shown.
- */
+/** Quick DNS-based reachability check - much cheaper than a full page fetch, used to warn before spending time on a parse that's likely to fail anyway. */
+function checkConnectivity() {
+  return new Promise((resolve) => {
+    dns.lookup('www.dlsite.com', (err) => resolve(!err));
+  });
+}
+
+// ---------------------------------------------------------------
+// Adding games
+// ---------------------------------------------------------------
+
 async function addFromExecutablePaths(exePaths, options) {
   for (const exePath of exePaths) {
     await processCandidate(scanner.resolveGameFromExecutable(exePath), options);
   }
 }
 
-/**
- * Processes a list of directory paths (from "Add directory" or a folder
- * drop). Each directory may resolve to one game (if it directly contains
- * an executable) or several (if it's a parent folder of multiple game
- * subfolders) - see game-scanner.js for the exact rule. All candidates
- * from all directories are processed sequentially, one prompt at a time.
- */
 async function addFromDirectoryPaths(dirPaths, options) {
   const exclusionList = await getExclusionList();
   for (const dirPath of dirPaths) {
@@ -54,12 +54,6 @@ async function addFromDirectoryPaths(dirPaths, options) {
   }
 }
 
-/**
- * Routes a mixed list of dropped paths (files and/or directories) through
- * the same logic as the two functions above - "automatically determine
- * action", per spec. Anything that's neither a .exe nor a directory is
- * silently ignored, also per spec.
- */
 async function addFromDroppedPaths(paths, options) {
   const exclusionList = await getExclusionList();
 
@@ -68,7 +62,7 @@ async function addFromDroppedPaths(paths, options) {
     try {
       stat = fs.statSync(p);
     } catch (e) {
-      continue; // no longer exists / inaccessible - skip
+      continue;
     }
 
     if (stat.isDirectory()) {
@@ -79,20 +73,18 @@ async function addFromDroppedPaths(paths, options) {
     } else if (stat.isFile() && p.toLowerCase().endsWith('.exe')) {
       await processCandidate(scanner.resolveGameFromExecutable(p), options);
     }
-    // else: neither an exe nor a directory - ignore
   }
 }
 
 /**
- * The shared per-candidate flow: no-code / already-exists prompts, then
- * the stub database record, then a (currently no-op) parser call.
- * options.onGameAdded(record), if given, runs after each successful add -
- * system/app.js uses it to refresh the table without re-fetching after
- * every single item in a batch.
+ * The shared per-candidate flow: no-code / already-exists (by productCode
+ * OR dlcCode) prompts, then a connectivity check, then the stub database
+ * record + parser call. options.onGameAdded(record) and
+ * options.onStatus(text|null) are both optional progress hooks.
  */
-async function processCandidate({ folderPath, productCode }, options) {
+async function processCandidate({ exePath, productCode }, options) {
   options = options || {};
-  const folderName = path.basename(folderPath);
+  const folderName = path.basename(path.dirname(exePath));
 
   if (!productCode) {
     const confirmed = await confirmDialog(
@@ -101,66 +93,102 @@ async function processCandidate({ folderPath, productCode }, options) {
     );
     if (!confirmed) return;
 
-    const record = await db.addGame({ productCode: generateLocalId(), path: folderPath });
-    if (options.onGameAdded) options.onGameAdded(record);
+    const record = await db.addGame({ productCode: generateLocalId(), path: exePath });
+    await finishAdding(record, null, options);
     return;
   }
 
-  if (await db.gameExists(productCode)) {
+  const existing = await db.findGameByCodeOrDlc(productCode);
+  if (existing) {
+    const matchKind = existing.productCode === productCode ? 'product code' : 'DLC code';
     const confirmed = await confirmDialog(
-      `A game with code "${productCode}" already exists in the library.`,
+      `A game with ${matchKind} "${productCode}" already exists in the library.`,
       { okLabel: 'Add anyway', cancelLabel: 'Skip' }
     );
     if (!confirmed) return;
 
     // productCode is the database's primary key, so a true duplicate
-    // can't coexist as-is - disambiguate rather than silently overwrite
-    // the existing entry's data.
-    const record = await db.addGame({ productCode: disambiguateCode(productCode), path: folderPath });
-    if (options.onGameAdded) options.onGameAdded(record);
+    // can't coexist as-is - disambiguate rather than silently overwrite.
+    const record = await db.addGame({ productCode: disambiguateCode(productCode), path: exePath });
+    await finishAdding(record, productCode, options);
     return;
   }
 
-  // New, unambiguous product code.
-  const record = await db.addGame({ productCode, path: folderPath });
+  const record = await db.addGame({ productCode, path: exePath });
+  await finishAdding(record, productCode, options);
+}
 
-  try {
-    const info = await fetchGameInfo(productCode);
-    if (info) {
-      await applyParsedInfo(productCode, info);
-    }
-  } catch (e) {
-    console.error('fetchGameInfo failed for', productCode, e);
-    // A failed/thrown parse must never take down the add flow - the stub
-    // record still exists and can be filled in later via Download info.
+async function finishAdding(record, parseCode, options) {
+  const engine = scanner.detectEngine(record.path);
+  if (engine) {
+    await db.updateGameFields(record.productCode, { original: Object.assign({}, record.original, { engine }) });
+  }
+
+  if (parseCode) {
+    await runParseWithGuards(record.productCode, parseCode, { fields: undefined }, options);
   }
 
   if (options.onGameAdded) options.onGameAdded(record);
 }
 
 /**
- * Writes parsed data into `original` (never `override`, which is
- * exclusively the user's own edits) and resolves/creates the circle by
- * name+rgCode the same way db.seedFromBackups() does for JSON backups.
- * Also downloads any image URLs the parser found (system/image-
- * downloader.js) and, if any of them actually succeeded, updates the
- * game's local images.thumb/images.gallery to match - a fully failed
- * download batch leaves the existing local images untouched, same
- * "never overwrite good data with bad" rule dlsite_parser.js follows for
- * every other field.
+ * Wraps a parser call with the connectivity check + status indicator +
+ * error handling every parse-triggering action shares (add, Download
+ * info, Update info, Check for updates).
  */
-async function applyParsedInfo(productCode, info) {
+async function runParseWithGuards(productCode, fetchCode, fetchOptions, options) {
+  options = options || {};
+
+  const online = await checkConnectivity();
+  if (!online) {
+    const proceed = await confirmDialog(
+      "Couldn't reach DLsite (no internet connection?).",
+      { okLabel: 'Add anyway', cancelLabel: 'Cancel' }
+    );
+    if (!proceed) return null;
+  }
+
+  if (options.onStatus) options.onStatus(`Fetching ${fetchCode}\u2026`);
+
+  let info = null;
+  try {
+    info = await fetchGameInfo(fetchCode, fetchOptions);
+  } catch (e) {
+    console.error('fetchGameInfo failed for', fetchCode, e);
+  } finally {
+    if (options.onStatus) options.onStatus(null);
+  }
+
+  return info;
+}
+
+/**
+ * Writes parsed data into `original` (never `override`, which is
+ * exclusively the user's own edits). Also downloads any image URLs the
+ * parser found - a fully failed download batch leaves existing local
+ * images untouched, same "never overwrite good data with bad" rule
+ * dlsite_parser.js follows for every other field.
+ *
+ * mode: 'download' (default) overwrites every field the parser returned;
+ * 'update' only fills fields that are currently empty in `original` -
+ * see the Download info / Update info context-menu actions.
+ */
+async function applyParsedInfo(productCode, info, mode) {
   const record = await db.getGameRecord(productCode);
   if (!record) return;
 
   const original = Object.assign({}, record.original);
 
   for (const field of db.OVERRIDABLE_FIELDS) {
-    if (field === 'circleId') continue; // handled separately below
-    if (info[field] !== undefined) original[field] = info[field];
+    if (field === 'circleId') continue;
+    if (info[field] === undefined) continue;
+    const currentlyEmpty = original[field] == null || original[field] === ''
+      || (Array.isArray(original[field]) && original[field].length === 0);
+    if (mode === 'update' && !currentlyEmpty) continue;
+    original[field] = info[field];
   }
 
-  if (info.circle && info.circle.name) {
+  if (info.circle && info.circle.name && (mode !== 'update' || original.circleId == null)) {
     let existing = null;
     if (info.circle.rgCode) {
       existing = await db.db.circles.where('rgCode').equals(info.circle.rgCode).first();
@@ -173,15 +201,12 @@ async function applyParsedInfo(productCode, info) {
 
   const patch = { original };
 
-  if (info.images) {
+  if (info.images && (mode !== 'update' || !record.images || (!record.images.thumb && !(record.images.gallery || []).length))) {
     try {
       const newImages = await downloadGameImages(productCode, info.images, record.images);
       if (newImages) patch.images = newImages;
     } catch (e) {
       console.error('Image download failed for', productCode, e);
-      // Same rule as everywhere else here: a failed download step must
-      // never block the rest of the update, and must never wipe out
-      // whatever images already existed.
     }
   }
 
@@ -189,12 +214,38 @@ async function applyParsedInfo(productCode, info) {
   await db.saveGameBackup(productCode);
 }
 
-/**
- * Scans a folder tree (same rule as "Add directory") without adding
- * anything, and reports which found product codes are already present in
- * the library - i.e. games that may have been added more than once from
- * different folders. Shows the results in a dismissible report modal.
- */
+/** Full re-scrape, overwriting every field the parser finds. */
+async function downloadInfo(productCode, options) {
+  const info = await runParseWithGuards(productCode, productCode, { fields: undefined }, options);
+  if (info) await applyParsedInfo(productCode, info, 'download');
+  return !!info;
+}
+
+/** Only fills fields currently empty in `original` - never touches anything already set. */
+async function updateInfo(productCode, options) {
+  const info = await runParseWithGuards(productCode, productCode, { fields: undefined }, options);
+  if (info) await applyParsedInfo(productCode, info, 'update');
+  return !!info;
+}
+
+/** Re-checks just the version field on the site and stores it as original.latestVersion, leaving the locally-tracked `version` untouched. */
+async function checkForUpdates(productCode, options) {
+  const info = await runParseWithGuards(productCode, productCode, { fields: ['version'] }, options);
+  if (!info || info.version === undefined) return null;
+
+  const record = await db.getGameRecord(productCode);
+  if (!record) return null;
+
+  const original = Object.assign({}, record.original, { latestVersion: info.version });
+  await db.db.games.update(productCode, { original });
+  await db.saveGameBackup(productCode);
+  return info.version;
+}
+
+// ---------------------------------------------------------------
+// Find duplicates / rebuild index
+// ---------------------------------------------------------------
+
 async function findDuplicates(rootPath) {
   const exclusionList = await getExclusionList();
   const candidates = scanner.resolveGameFoldersFromDirectory(rootPath, exclusionList);
@@ -202,11 +253,11 @@ async function findDuplicates(rootPath) {
   const duplicates = [];
   for (const candidate of candidates) {
     if (!candidate.productCode) continue;
-    const existing = await db.getGameRecord(candidate.productCode);
+    const existing = await db.findGameByCodeOrDlc(candidate.productCode);
     if (existing) {
       duplicates.push({
         productCode: candidate.productCode,
-        scannedPath: candidate.folderPath,
+        scannedPath: candidate.exePath,
         existingPath: existing.path
       });
     }
@@ -223,9 +274,80 @@ async function findDuplicates(rootPath) {
   return duplicates;
 }
 
-/** Reloads every game from its JSON backup under Database/Games - see db.seedFromBackups(). */
 async function rebuildIndex() {
   return db.seedFromBackups();
+}
+
+// ---------------------------------------------------------------
+// Remove / rename / organize
+// ---------------------------------------------------------------
+
+/** Removes a game from the database (and its backup folder). Never touches the actual game files. */
+async function removeFromList(productCode) {
+  const confirmed = await confirmDialog(
+    `Remove ${productCode} from your library? This does not delete the actual game files - only DLSiteManager's saved info about it.`,
+    { okLabel: 'Remove', cancelLabel: 'Cancel' }
+  );
+  if (!confirmed) return false;
+
+  await db.removeGame(productCode);
+  return true;
+}
+
+/**
+ * Renames a game's folder in place (does not move it), or renames AND
+ * moves it into the configured main folder, per `organize`. Both check
+ * for an existing folder at the destination first - the check only
+ * applies to the resolved game folder name itself; a template segment
+ * like "[{circle}]" that happens to collide with another existing
+ * top-level folder (not itself a specific game's folder) is not treated
+ * as a conflict.
+ */
+async function renameGame(productCode, template, organize, mainFolder) {
+  const record = await db.getGameRecord(productCode);
+  if (!record) throw new Error('No such game: ' + productCode);
+
+  const resolved = await db.resolveGame(record);
+  const circle = resolved.circleId != null
+    ? (await db.getAllCircles()).find(c => c.circleId === resolved.circleId)
+    : null;
+
+  const newName = applyRenameTemplate(template, {
+    rjcode: resolved.productCode,
+    circle: circle ? circle.name : '',
+    cvs: (resolved.cvs || []).join(', '),
+    title: resolved.title || '',
+    category: resolved.category || '',
+    foldername: path.basename(path.dirname(record.path))
+  });
+
+  const currentDir = path.dirname(record.path);
+  const exeName = path.basename(record.path);
+
+  const destDir = organize
+    ? path.join(mainFolder, newName)
+    : path.join(path.dirname(currentDir), newName);
+
+  if (destDir !== currentDir && fs.existsSync(destDir)) {
+    throw new Error(`A folder already exists at "${destDir}".`);
+  }
+
+  fs.renameSync(currentDir, destDir);
+
+  const newPath = path.join(destDir, exeName);
+  await db.updateGameFields(productCode, { path: newPath });
+  return newPath;
+}
+
+function applyRenameTemplate(template, values) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    const value = values[key];
+    return value != null && value !== '' ? sanitizeForPath(String(value)) : '';
+  }).trim();
+}
+
+function sanitizeForPath(str) {
+  return str.replace(/[<>:"/\\|?*]/g, '').trim();
 }
 
 function generateLocalId() {
@@ -240,7 +362,13 @@ module.exports = {
   addFromExecutablePaths,
   addFromDirectoryPaths,
   addFromDroppedPaths,
+  downloadInfo,
+  updateInfo,
+  checkForUpdates,
   findDuplicates,
   rebuildIndex,
+  removeFromList,
+  renameGame,
+  checkConnectivity,
   DEFAULT_EXCLUSION_LIST
 };

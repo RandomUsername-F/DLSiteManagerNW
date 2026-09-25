@@ -10,42 +10,34 @@
 // Database\Games\ (the JSON/image backups).
 //
 // GAME RECORD SHAPE
-// Each game has two parallel field sets instead of one flat set:
-//   original  - written when the app scrapes/saves data from DLsite.
-//               Never edited by hand; read-only in the UI.
-//   override  - the user's own edits. Any field left null/empty here
-//               falls back to the matching field in `original` when
-//               displayed (see resolveGame() below) - that's what lets
-//               the "Game info" tab show inherited values without the
-//               user having to fill in everything themselves.
-// productCode, path, images, and addedDate sit outside that split since
-// they aren't dual-sourced the same way.
-//
 // {
 //   productCode: "RJ012345",
-//   path: "D:\\Games\\...",
+//   dlcCode: "RJ012346",           // optional - a separately DLsite-listed DLC for this game, if any
+//   path: "D:\\Games\\...\\Game.exe", // points directly at the executable, not just its folder
 //   addedDate: "2026-06-01",
 //   images: { thumb: "images/thumb.jpg", gallery: ["images/001.jpg", ...] },
+//   launcher: { enabled, value },        // optional custom launcher override
+//   launchParameters: { enabled, value },
 //   original: { title, circleId, category, language, engine, version,
-//               sizeBytes, dlsiteRating, releaseDate, tags, hvdbTags, cvs,
-//               description },
-//   override: { title, circleId, category, language, engine, version,
-//               sizeBytes, rating, dlsiteRating, timesPlayed,
-//               secondsPlayed, lastPlayedDate, releaseDate, tags,
-//               hvdbTags, cvs, description, comments }
+//               latestVersion, sizeBytes, dlsiteRating, releaseDate, tags,
+//               hvdbTags, cvs, description },
+//   override: { ...same field set..., rating, timesPlayed, secondsPlayed,
+//               lastPlayedDate, comments }
 // }
+// original/override never embed circle data directly - only a local
+// circleId, resolved against the circles table (see CIRCLES below).
 //
 // CIRCLES
-// Circles (developers) are their own entity, not a free-text field on the
-// game, matching the old WinForms app's Circle/CircleEditor: a circle's
-// display Name can vary or be renamed, but its DLsite maker code (RGCode -
-// despite the name, DLsite actually uses RG/VG/BG prefixes depending on
-// the circle type) is the real, stable identifier. Games reference a
-// circle by the local circleId (Dexie's auto-increment key), same as the
-// old app's Game.CircleID foreign key - never by name or RGCode directly,
-// since either of those can be missing or change.
-//
-//   circles: { circleId: 1, name: "Falcom", rgCode: "VG01562" }
+// Circles (developers) are their own entity, not a field on the game -
+// their display Name can vary/be renamed independently of their DLsite
+// maker code (RGCode - despite the name, DLsite actually uses RG/VG/BG
+// prefixes depending on circle type), which is the real, stable
+// identifier. Games reference a circle only by the local circleId
+// (Dexie's key); nothing about a circle is duplicated onto a game record,
+// and no game-facing UI edits circle data directly - only
+// system/circle-editor.js does. Backed up as one file, Database/circles.json
+// (not embedded per-game), so a circle rename doesn't require touching
+// every game that references it.
 
 const Dexie = require('dexie');
 const fs = require('fs');
@@ -53,31 +45,23 @@ const path = require('path');
 
 const db = new Dexie('DLSiteManager');
 
-// Root folder for per-game JSON/image backups - see saveGameBackup() and
-// seedFromBackups() below.
 const GAMES_ROOT = path.join(__dirname, '..', 'Database', 'Games', 'DLsite');
+const CIRCLES_BACKUP_PATH = path.join(__dirname, '..', 'Database', 'circles.json');
 
 db.version(1).stores({
-  // productCode (e.g. "RJ012345") is the primary key, matching the folder
-  // name under Database/Games/DLsite/<productCode>/ used for JSON backups.
-  // Dotted-path indexes reach into original/override for future
-  // filtering/search; nothing queries them yet - list sorting currently
-  // happens client-side in system/table.js against the resolved view.
-  games: 'productCode, original.title, override.rating, override.lastPlayedDate, addedDate',
+  games: 'productCode, dlcCode, original.title, override.rating, override.lastPlayedDate, addedDate',
   circles: '++circleId, rgCode, name',
-  // Generic key/value store for app + UI settings.
   settings: 'key'
 });
 
 // Fields that exist in both original and override, in the order the edit
-// panel displays them. Shared with system/edit-panel.js so the two tabs
-// and the resolved/list view all agree on what a "field" is. circleId
-// resolves the same override-or-original way as everything else here;
-// system/edit-panel.js just renders it with a custom widget (name lookup
-// + "Edit" button opening the circle manager) instead of a text input.
+// panel displays them (see system/edit-panel.js's EDIT_FIELDS, which is
+// the authoritative display order/pairing - this list just needs to
+// contain every field name that participates in override-or-original
+// resolution).
 const OVERRIDABLE_FIELDS = [
-  'title', 'circleId', 'category', 'language', 'engine', 'version', 'sizeBytes',
-  'rating', 'dlsiteRating', 'timesPlayed', 'secondsPlayed',
+  'title', 'circleId', 'category', 'language', 'engine', 'version', 'latestVersion',
+  'sizeBytes', 'rating', 'dlsiteRating', 'timesPlayed', 'secondsPlayed',
   'lastPlayedDate', 'releaseDate', 'tags', 'hvdbTags', 'cvs', 'description', 'comments'
 ];
 
@@ -89,6 +73,7 @@ const OVERRIDABLE_FIELDS = [
 function resolveGame(record) {
   const resolved = {
     productCode: record.productCode,
+    dlcCode: record.dlcCode,
     path: record.path,
     addedDate: record.addedDate,
     images: record.images
@@ -109,7 +94,7 @@ function resolveGame(record) {
 
 /**
  * Returns every game in the library as resolved (effective) flat objects,
- * with `circle` added as the looked-up circle name (system/table.js's
+ * with `circle` added as the looked-up circle name (System/table.js's
  * circle column just reads this like any other plain field - it doesn't
  * know circles are a separate table).
  */
@@ -137,17 +122,33 @@ async function gameExists(productCode) {
 }
 
 /**
+ * True if `code` matches an existing game's productCode OR its dlcCode -
+ * used by the add-game duplicate check (system/library-import.js), since
+ * a code that's already tracked as a DLC of some other game is just as
+ * much a duplicate-add as a matching productCode.
+ */
+async function findGameByCodeOrDlc(code) {
+  if (!code) return null;
+  const byCode = await db.games.get(code);
+  if (byCode) return byCode;
+  return db.games.where('dlcCode').equals(code).first();
+}
+
+/**
  * Creates a minimal stub record for a newly added game - just enough to
  * show up in the list (productCode, path, addedDate). `original` starts
- * empty; system/parser.js (once implemented) is what fills it in, either
- * right after adding or later via the "Download info" button.
+ * empty; system/dlsite_parser.js is what fills it in, either right after
+ * adding or later via a context-menu action.
  */
-async function addGame({ productCode, path }) {
+async function addGame({ productCode, path: gamePath, dlcCode }) {
   const record = {
     productCode,
-    path,
+    dlcCode: dlcCode || null,
+    path: gamePath,
     addedDate: new Date().toISOString(),
     images: { thumb: null, gallery: [] },
+    launcher: { enabled: false, value: '' },
+    launchParameters: { enabled: false, value: '' },
     original: {},
     override: {}
   };
@@ -170,45 +171,12 @@ async function saveGameBackup(productCode) {
   if (!record) return;
 
   try {
-    const circles = await db.circles.toArray();
-    const circleById = new Map(circles.map(c => [c.circleId, c]));
-
-    const payload = {
-      productCode: record.productCode,
-      path: record.path,
-      addedDate: record.addedDate,
-      images: record.images,
-      launcher: record.launcher,
-      launchParameters: record.launchParameters,
-      original: toPortableFieldSet(record.original, circleById),
-      override: toPortableFieldSet(record.override, circleById)
-    };
-
     const folder = path.join(GAMES_ROOT, productCode);
     fs.mkdirSync(path.join(folder, 'images'), { recursive: true });
-    fs.writeFileSync(path.join(folder, 'info.json'), JSON.stringify(payload, null, 2), 'utf8');
+    fs.writeFileSync(path.join(folder, 'info.json'), JSON.stringify(record, null, 2), 'utf8');
   } catch (e) {
     console.error('Failed to write backup JSON for', productCode, e);
   }
-}
-
-/**
- * original/override use a local circleId (see the header comment); the
- * portable backup format uses an embedded {name, rgCode} instead, the
- * same shape seedFromBackups() expects on the way back in.
- */
-function toPortableFieldSet(fieldSet, circleById) {
-  if (!fieldSet) return fieldSet;
-
-  const rest = Object.assign({}, fieldSet);
-  const circleId = rest.circleId;
-  delete rest.circleId;
-
-  if (circleId != null) {
-    const circle = circleById.get(circleId);
-    if (circle) rest.circle = { name: circle.name, rgCode: circle.rgCode };
-  }
-  return rest;
 }
 
 /** Merges the given fields into a game's override object and returns the updated record. */
@@ -224,13 +192,22 @@ async function updateGameOverride(productCode, overridePatch) {
 
 /**
  * Merges the given fields directly onto the top level of a game record -
- * for things like `launcher`/`launchParameters` that are plain per-game
- * settings, not part of the original/override system (there's no
- * "original" launcher scraped from a website).
+ * for things like `launcher`/`launchParameters`/`dlcCode`/`path` that
+ * are plain per-game settings, not part of the original/override system.
  */
 async function updateGameFields(productCode, patch) {
   await db.games.update(productCode, patch);
   await saveGameBackup(productCode);
+}
+
+/** Removes a game and its on-disk backup folder entirely. Never touches the actual game files themselves. */
+async function removeGame(productCode) {
+  await db.games.delete(productCode);
+  try {
+    fs.rmSync(path.join(GAMES_ROOT, productCode), { recursive: true, force: true });
+  } catch (e) {
+    console.error('Failed to remove backup folder for', productCode, e);
+  }
 }
 
 // ---------------------------------------------------------------
@@ -252,15 +229,31 @@ async function saveCircle(circle) {
     rgCode: normalizeRgCodeForStorage(circle.rgCode)
   };
 
+  let id;
   if (circle.circleId != null) {
     await db.circles.update(circle.circleId, record);
-    return circle.circleId;
+    id = circle.circleId;
+  } else {
+    id = await db.circles.add(record);
   }
-  return db.circles.add(record);
+  await saveCirclesBackup();
+  return id;
 }
 
 async function deleteCircle(circleId) {
   await db.circles.delete(circleId);
+  await saveCirclesBackup();
+}
+
+/** Writes every circle to Database/circles.json - the single source of truth backup for circle data (see the CIRCLES header comment above). */
+async function saveCirclesBackup() {
+  try {
+    const circles = await db.circles.toArray();
+    fs.mkdirSync(path.dirname(CIRCLES_BACKUP_PATH), { recursive: true });
+    fs.writeFileSync(CIRCLES_BACKUP_PATH, JSON.stringify(circles, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to write Database/circles.json', e);
+  }
 }
 
 function normalizeRgCodeForStorage(raw) {
@@ -308,22 +301,27 @@ async function setSetting(key, value) {
 }
 
 /**
- * DEV/TESTING HELPER - not called automatically anywhere. The app's
- * eventual "Database/Games exists but no database yet" rebuild prompt
- * will do something similar, but ask the user first; this is just a way
- * to get the dummy fixture games into IndexedDB to test the UI without
- * building that flow yet.
+ * Rebuilds the database from the on-disk backups: Database/circles.json
+ * first (so circleId references in each game backup resolve correctly -
+ * bulkPut with an explicit key reuses that exact id rather than
+ * generating a new one), then every Database/Games/DLsite/<code>/info.json.
  *
- * JSON backups store each game's circle as a portable, self-contained
- * { name, rgCode } object (not a local circleId, which wouldn't mean
- * anything on a different install) - this finds-or-creates the matching
- * circle row (de-duplicated by rgCode, falling back to name) and swaps it
- * for a circleId before the game record is saved.
- *
- * Run from devtools console:
+ * Not called automatically - triggered by the "Rebuild index" action, or
+ * usable directly from devtools:
  *   require('./system/db.js').seedFromBackups().then(n => console.log(n, 'games loaded'))
  */
 async function seedFromBackups() {
+  if (fs.existsSync(CIRCLES_BACKUP_PATH)) {
+    try {
+      const circles = JSON.parse(fs.readFileSync(CIRCLES_BACKUP_PATH, 'utf8'));
+      if (Array.isArray(circles) && circles.length) {
+        await db.circles.bulkPut(circles);
+      }
+    } catch (e) {
+      console.error('Failed to load Database/circles.json', e);
+    }
+  }
+
   if (!fs.existsSync(GAMES_ROOT)) {
     console.warn('No Database/Games/DLsite folder found at', GAMES_ROOT);
     return 0;
@@ -344,42 +342,6 @@ async function seedFromBackups() {
     }
   }
 
-  const circleCache = new Map(); // rgCode-or-name key -> circleId, so repeat circles across games only get one row
-
-  async function resolveCircleId(circleInfo) {
-    if (!circleInfo || !circleInfo.name) return null;
-
-    const cacheKey = circleInfo.rgCode || ('name:' + circleInfo.name);
-    if (circleCache.has(cacheKey)) return circleCache.get(cacheKey);
-
-    let existing = null;
-    if (circleInfo.rgCode) {
-      existing = await db.circles.where('rgCode').equals(circleInfo.rgCode).first();
-    }
-    if (!existing) {
-      existing = await db.circles.where('name').equals(circleInfo.name).first();
-    }
-
-    const id = existing ? existing.circleId : await saveCircle(circleInfo);
-    circleCache.set(cacheKey, id);
-    return id;
-  }
-
-  for (const record of records) {
-    if (record.original && record.original.circle) {
-      record.original.circleId = await resolveCircleId(record.original.circle);
-      delete record.original.circle;
-    }
-    if (record.override) {
-      if (record.override.circle) {
-        record.override.circleId = await resolveCircleId(record.override.circle);
-      } else {
-        record.override.circleId = null;
-      }
-      delete record.override.circle;
-    }
-  }
-
   if (records.length) {
     await db.games.bulkPut(records);
   }
@@ -388,18 +350,22 @@ async function seedFromBackups() {
 
 module.exports = {
   db,
+  GAMES_ROOT,
   OVERRIDABLE_FIELDS,
   resolveGame,
   getAllGames,
   getGameRecord,
   gameExists,
+  findGameByCodeOrDlc,
   addGame,
+  removeGame,
   saveGameBackup,
   updateGameOverride,
   updateGameFields,
   getAllCircles,
   saveCircle,
   deleteCircle,
+  saveCirclesBackup,
   isValidRgCode,
   displayRgCode,
   getSetting,

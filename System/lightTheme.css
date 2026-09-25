@@ -1,32 +1,42 @@
+/* system/lightTheme.css
+   Light theme - overrides the dark palette's :root custom properties.
+   Loaded as a second stylesheet (see index.html's #theme-stylesheet
+   link) and toggled via its `disabled` property, rather than swapping
+   style.css itself - everything else already reads these tokens via
+   var(--x), so redefining just the tokens here is enough. */
+
 :root {
-    /* Surfaces */
-    --bg: #f4f5f7;
-    --panel: #ffffff;
-    --panel-alt: #eaedf2;
+  --bg: #f5f3ee;
+  --panel: #ffffff;
+  --panel-alt: #ece8e0;
+  --border: #d3cdc0;
+  --border-soft: #e3ddd0;
 
-    /* Borders */
-    --border: #d0d5dd;
-    --border-soft: #e4e7ec;
+  --text: #1c1a16;
+  --text-muted: #5c5648;
+  --text-faint: #8a7f68;
 
-    /* Text */
-    --text: #1a1d23;
-    --text-muted: #667085;
-    --text-faint: #255eb8;
+  --accent: #b0472c;
+  --accent-soft: rgba(176, 71, 44, 0.10);
+  --accent-text: #8a3420;
 
-    /* Accent (Terracotta Red) */
-    --accent: #b0472c;
-    --accent-soft: rgba(176, 71, 44, 0.10);
-    --accent-text: #8c2e17;
+  --gold: #b8860b;
+  --gold-dim: #e8dcb0;
 
-    /* Gold / Highlights */
-    --gold: #d99b00;
-    --gold-dim: #fef8e7;
+  --scrollbar-track: #e0dccf;
+  --scrollbar-thumb: #b0a890;
+  --scrollbar-hover: #8a8270;
+  --scrollbar-corner: #f5f3ee;
+}
 
-    /* Scrollbars */
-    --scrollbar-track: #e4e7ec;
-    --scrollbar-thumb: #98a2b3;
-    --scrollbar-hover: #667085;
-    --scrollbar-corner: #f4f5f7;
+.btn--primary {
+  color: #fff5ef;
+}
 
-    /* Fonts & Radii remain untouched */
+.window-controls button {
+  color: #1c1a16;
+}
+
+.window-controls button:hover {
+  background-color: #e3ddd0;
 }

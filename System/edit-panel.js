@@ -42,16 +42,17 @@ function requireEl(id) {
 // used for Product Code/Path); fullWidth fields get their own row.
 const EDIT_FIELDS = [
   { id: 'title', label: 'Title', type: 'text', fullWidth: true },
-  { id: 'circleId', label: 'Circle', type: 'circle-ref' },
-  { id: 'category', label: 'Category', type: 'text' },
-  { id: 'language', label: 'Language', type: 'text' },
-  { id: 'engine', label: 'Engine', type: 'text' },
-  { id: 'version', label: 'Version', type: 'text' },
+  { id: 'circleId', label: 'Circle', type: 'circle-ref', fullWidth: true },
+  { id: 'category', label: 'Category', type: 'text', fullWidth: true },
+  { id: 'language', label: 'Language', type: 'text', fullWidth: true },
   { id: 'sizeBytes', label: 'Size', type: 'size', readOnly: true },
-  { id: 'dlsiteRating', label: 'DLSite Rating', type: 'stars', gold: true, readOnly: true },
-  { id: 'lastPlayedDate', label: 'Last Played', type: 'date', readOnly: true },
+  { id: 'engine', label: 'Engine', type: 'text' },
   { id: 'releaseDate', label: 'Released', type: 'date' },
-  { id: 'tags', label: 'Tags', type: 'list' },
+  { id: 'dlsiteRating', label: 'DLSite Rating', type: 'stars', gold: true, readOnly: true },
+  { id: 'version', label: 'Version', type: 'text' },
+  { id: 'latestVersion', label: 'Latest version', type: 'text', readOnly: true },
+  { id: 'lastPlayedDate', label: 'Last Played', type: 'date', readOnly: true, fullWidth: true },
+  { id: 'tags', label: 'Tags', type: 'list', fullWidth: true },
   { id: 'description', label: 'Description', type: 'textarea', fullWidth: true, collapsible: true }
 ];
 
@@ -71,6 +72,7 @@ class EditPanel {
     this.downloadBtn = requireEl('edit-download-btn');
 
     this.productCodeEl = requireEl('field-productcode');
+    this.dlcCodeInput = requireEl('field-dlccode-input');
     this.pathTextEl = requireEl('field-path-text');
 
     this.imageStripEl = requireEl('image-strip');
@@ -121,6 +123,16 @@ _bindStaticHandlers() {
     this.launcherInput.addEventListener('blur', () => this._saveLaunchSetting('launcher'));
     this.launchParamsCheckbox.addEventListener('change', () => this._saveLaunchSetting('launchParameters'));
     this.launchParamsInput.addEventListener('blur', () => this._saveLaunchSetting('launchParameters'));
+
+    // Same immediate-save pattern for DLC Code - it's a plain per-game
+    // field tracked by this app, not something DLsite's page reliably
+    // exposes for every product, so it's user-entered rather than parsed.
+    this.dlcCodeInput.addEventListener('blur', async () => {
+      if (!this.currentRecord || !this.onUpdateLaunchSettings) return;
+      const value = this.dlcCodeInput.value.trim() || null;
+      this.currentRecord.dlcCode = value;
+      await this.onUpdateLaunchSettings(this.currentRecord.productCode, { dlcCode: value });
+    });
 
     // Hover-preview: delegated on the strip so it works for thumbs added
     // after the fact, without rebinding per-image.
@@ -196,6 +208,8 @@ _bindStaticHandlers() {
     this.applyBtn.hidden = true;
 
     this.productCodeEl.textContent = record.productCode;
+    this.dlcCodeInput.value = record.dlcCode || '';
+    this.dlcCodeInput.disabled = false;
     this.pathTextEl.textContent = record.path || '';
 
     const launcher = record.launcher || { enabled: false, value: '' };
@@ -232,6 +246,8 @@ _bindStaticHandlers() {
     this.applyBtn.hidden = true;
 
     this.productCodeEl.textContent = '';
+    this.dlcCodeInput.value = '';
+    this.dlcCodeInput.disabled = true;
     this.pathTextEl.textContent = '';
 
     this.launcherCheckbox.checked = false;
@@ -385,14 +401,26 @@ _bindStaticHandlers() {
 
       if (field.type === 'circle-ref') {
         valueEl = this._buildCircleFieldForContext(field, data, options);
-      } else if (options.editable && field.readOnly) {
-        // e.g. ratings: still resolved (override-or-original), but never an
-        // editable control, even while the rest of the tab is in edit mode.
-        const overrideValue = data[field.id];
-        const originalValue = options.originalValues[field.id];
-        const isEmpty = overrideValue == null || overrideValue === ''
-          || (Array.isArray(overrideValue) && overrideValue.length === 0);
-        valueEl = this._buildReadOnlyValue(field, isEmpty ? originalValue : overrideValue, isEmpty);
+      } else if (field.readOnly) {
+        // No override path is exposed through this form for these fields,
+        // but some (size, last played) still get their real value from
+        // override elsewhere in the app - so the resolved value is still
+        // what's shown. What's suppressed is only the "inherited" dimming/
+        // tag treatment, which isn't meaningful here either way since
+        // there's nothing the user can do about it from this form.
+        let value;
+        if (options.editable) {
+          const overrideValue = data[field.id];
+          const originalValue = options.originalValues[field.id];
+          const isEmpty = overrideValue == null || overrideValue === ''
+            || (Array.isArray(overrideValue) && overrideValue.length === 0);
+          value = isEmpty ? originalValue : overrideValue;
+        } else if (options.resolvedMode) {
+          value = (data[field.id] || {}).value;
+        } else {
+          value = data[field.id];
+        }
+        valueEl = this._buildReadOnlyValue(field, value, false);
       } else if (options.editable) {
         valueEl = this._buildInput(field, data[field.id], options.originalValues[field.id]);
       } else if (options.resolvedMode) {
