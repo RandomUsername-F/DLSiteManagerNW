@@ -10,7 +10,7 @@ It also includes a database importer for the original Manager by Lux.
 ## Install / setup
 
 1. Open <https://nwjs.io/downloads/>, download the **normal** version for your OS, extract it and rename the folder to `DLSite Manager NW`.
-2. Download `DLSiteManagerNW.zip` from the provided links and extract it directly into that folder (where `nw.exe` is). Overwrite if asked.
+2. Download `repository and copy it directly into the folder (where `nw.exe` is). Overwrite if asked.
 3. *(Optional)* Rename `nw.exe` to `Manager.exe`.
 4. Run `install-dependencies.bat`. You will need Node <https://nodejs.org/en/download/> installed for this step.
 5. Start the executable. The first run may take a little longer while the database is set up.
