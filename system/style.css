@@ -1,0 +1,1393 @@
+/* ---------------------------------------------------------------
+   Design tokens
+   A dark archive-ledger palette: warm charcoal, hairline dividers,
+   an oxblood ink-stamp accent for selection/action, and a small
+   amount of gold reserved strictly for star ratings.
+------------------------------------------------------------------ */
+:root {
+    --bg: #14171c;
+    --panel: #1b1f26;
+    --panel-alt: #20242c;
+    --border: #424750;
+    --border-soft: #232830;
+    
+    --text: #fff;
+    --text-muted: #8a8a8a;
+    --text-faint: #8ab0fa;
+
+    --accent: #b0472c;
+    --accent-soft: rgba(176, 71, 44, 0.16);
+    --accent-text: #e9a58e;
+
+    --gold: #f8d725eb;
+    --gold-dim: #4a3c19;
+
+    --scrollbar-track: #a0a0a0;
+    --scrollbar-thumb: #000000be;
+    --scrollbar-hover: #515c6e;
+    --scrollbar-corner: #14171c;
+
+    --font-display: Georgia, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --font-ui: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+
+    --radius: 3px;
+}
+
+/* Width and height of the scrollbar tracks */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Scrollbar Track (Background) */
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+/* Scrollbar Thumb (Draggable handle) */
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+}
+
+/* Hover state for the thumb */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+/* Scrollbar Corner (where horizontal and vertical bars meet) */
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+#titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background-color: var(--bg);
+  color: var(--text);
+  user-select: none;
+  -webkit-app-region: drag; 
+}
+
+.title {
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+.window-controls {
+  display: flex;
+  -webkit-app-region: no-drag; 
+  position: relative;
+  z-index: 9999;
+}
+
+.window-controls button {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  width: 45px;
+  height: 32px;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  z-index: 9999;
+}
+
+.window-controls button:hover {
+  background-color: #333333;
+}
+
+.window-controls #btn-close:hover {
+  background-color: #e81123;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------
+   Menu bar
+------------------------------------------------------------------ */
+#menu-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+.menu-item {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.menu-item:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+.menu-item-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.menu-dropdown {
+  position: fixed;
+  z-index: 15;
+  min-width: 170px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.menu-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.menu-dropdown-item:hover {
+  background: var(--accent-soft);
+}
+
+.menu-dropdown-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+.menu-dropdown-item.has-submenu::after {
+  content: "\25B8";
+  float: right;
+  margin-left: 16px;
+}
+
+.menu-item--icon {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: 6px;
+  align-self: center;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.help-box {
+  min-width: 50vw;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.help-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.help-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 12px;
+}
+
+.help-section-title {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: var(--accent-text);
+}
+
+.help-section-title:first-child {
+  margin-top: 0;
+}
+
+.help-list {
+  margin: 0;
+  font-size: 12px;
+}
+
+.help-list dt {
+  font-weight: bold;
+  margin-top: 6px;
+}
+
+.help-list dd {
+  margin: 2px 0 0 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Settings -> Custom -> Tags replacement */
+.tagrep-scroll {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tagrep-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tagrep-table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-weight: normal;
+  font-size: 12px;
+  padding: 4px 6px;
+  color: var(--text-muted);
+  background: var(--panel-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+.tagrep-table td {
+  width: 50%;
+  padding: 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tagrep-table td + td,
+.tagrep-table th + th {
+  border-left: 1px solid var(--border-soft);
+}
+
+.tagrep-table input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.tagrep-table input:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* ---------------------------------------------------------------
+   Workspace: list panel (left) + edit panel (right)
+------------------------------------------------------------------ */
+#workspace {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+#list-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+#list-panel.is-drag-over::after {
+  content: "Drop to add";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(176, 71, 44, 0.14);
+  border: 2px dashed var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-display);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+#table-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------
+   Game table
+------------------------------------------------------------------ */
+#game-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+#game-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 10px;
+  position: relative; /* anchors .th-resize-handle */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+  user-select: none;
+}
+
+#game-table thead th:hover {
+  color: var(--text);
+  background: var(--panel-alt);
+}
+
+.th-sort-arrow {
+  color: var(--accent-text);
+  font-size: 10px;
+}
+
+.th-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.th-resize-handle:hover {
+  background: var(--accent);
+}
+
+#game-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+#game-table tbody tr:nth-child(even) {
+  background: var(--panel-alt);
+}
+
+#game-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+#game-table tbody tr.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+#game-table tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-cover {
+  padding: 4px 6px 4px 10px;
+}
+
+.cover-thumb {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--panel-alt);
+}
+
+/* Rating stars, drawn with a gradient-filled mask rather than glyphs
+   so the fill percentage can be set per-row. */
+.stars {
+  --fill: 0%;
+  display: inline-block;
+  width: 72px;
+  height: 12px;
+  background-image:
+    linear-gradient(90deg, var(--text-muted) 0 var(--fill), var(--border) var(--fill) 100%);
+  -webkit-mask-image: repeating-linear-gradient(90deg, black 0 10px, transparent 10px 14.4px);
+  mask-image: repeating-linear-gradient(90deg, black 0 10px, transparent 10px 14.4px);
+}
+
+.stars--gold {
+  background-image:
+    linear-gradient(90deg, var(--gold) 0 var(--fill), var(--gold-dim) var(--fill) 100%);
+}
+
+.stars--lg {
+  width: 100px;
+  height: 16px;
+}
+
+/* ---------------------------------------------------------------
+   Find bar (docked under the list, as in the original layout)
+------------------------------------------------------------------ */
+#find-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+#find-icon {
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+#find-input {
+  flex: 1 1 auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 8px;
+}
+
+#find-input::placeholder {
+  color: var(--text-faint);
+}
+
+#find-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#find-clear {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#find-clear:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.edit-desc-tools {
+  margin: 4px 0;
+}
+
+/* ---------------------------------------------------------------
+   Panel splitter — drag to resize the list/edit panel ratio
+------------------------------------------------------------------ */
+#panel-splitter {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: var(--border);
+}
+
+#panel-splitter:hover {
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------------------
+   Column visibility menu (right-click a column header)
+------------------------------------------------------------------ */
+#column-menu {
+  position: fixed;
+  z-index: 10;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.column-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.column-menu-item:hover {
+  background: var(--panel);
+  border-radius: var(--radius);
+}
+
+/* ---------------------------------------------------------------
+   Edit panel (right) — a card-index style record for the
+   selected game
+------------------------------------------------------------------ */
+#edit-panel {
+  flex: 0 0 340px;
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 14px 16px 24px;
+}
+
+/* ---------------------------------------------------------------
+   Image strip + hover-preview overlay
+------------------------------------------------------------------ */
+#image-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.edit-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--panel-alt);
+}
+
+.edit-thumb:hover {
+  border-color: var(--accent);
+}
+
+#image-preview-overlay {
+  position: fixed;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 14, 0.92);
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+#image-preview-overlay.visible {
+  display: flex;
+}
+
+#image-preview-overlay img {
+  max-width: 92%;
+  max-height: 92%;
+  object-fit: contain;
+}
+
+/* ---------------------------------------------------------------
+   Game info / Original info tabs
+------------------------------------------------------------------ */
+#edit-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.edit-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 4px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: default;
+}
+
+.edit-tab:hover {
+  color: var(--text);
+}
+
+.edit-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.edit-tab-pane {
+  display: none;
+}
+
+.edit-tab-pane.is-active {
+  display: block;
+}
+
+.edit-inherited-tag {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.stars--inherited {
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------
+   Editable field inputs (Game info tab, edit mode)
+------------------------------------------------------------------ */
+.edit-field input[type="text"],
+.edit-field input[type="number"],
+.edit-field input[type="date"],
+.edit-field textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 7px;
+}
+
+.edit-field input:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.edit-field textarea {
+  resize: vertical;
+  font-family: var(--font-ui);
+}
+
+.star-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-input-number {
+  width: 56px;
+}
+
+.edit-input--title {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------
+   Confirm modal (e.g. "discard unsaved changes?")
+------------------------------------------------------------------ */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 14, 0.6);
+}
+
+.confirm-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-message {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.edit-toolbar--bottom {
+  margin-bottom: 0;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+#edit-content.is-empty {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------
+   Launcher / Launch parameters — outside the tabs, always in the
+   same place regardless of which tab is active
+------------------------------------------------------------------ */
+.launch-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.launch-field input[type="checkbox"] {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.launch-input {
+  flex: 1 1 auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 5px 7px;
+}
+
+.launch-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.launch-input:disabled {
+  color: var(--text-faint);
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.btn:hover {
+  border-color: var(--text-faint);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f3e3dc;
+}
+
+.btn--inline {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------
+   Empty states — no games in the table yet / nothing selected
+------------------------------------------------------------------ */
+.empty-row td {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+.edit-field {
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.edit-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 3px;
+}
+
+.edit-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.edit-value--title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.edit-value--path {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.edit-value--comments {
+  color: var(--text-muted);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.edit-value--description {
+  color: var(--text);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.edit-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-alt);
+  padding: 2px 8px;
+}
+
+.edit-details summary {
+  font-size: 11px;
+  color: var(--text-faint);
+  cursor: default;
+  padding: 6px 0;
+  user-select: none;
+}
+
+.edit-details[open] summary {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.edit-details .edit-value--description {
+  padding-bottom: 8px;
+}
+
+.edit-details textarea {
+  margin-bottom: 8px;
+}
+
+.edit-row {
+  display: flex;
+  gap: 1px;
+  /*flex-direction: column;*/
+}
+
+.edit-row .edit-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------
+   Circle field (Game info / Original info) + circle manager modal
+------------------------------------------------------------------ */
+.circle-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.circle-rgcode {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1px 5px;
+}
+
+.circle-editor-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.circle-editor-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.circle-editor-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+
+.circle-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.circle-editor-row:last-child {
+  border-bottom: none;
+}
+
+.circle-editor-row.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.circle-editor-name,
+.circle-editor-rgcode {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.circle-editor-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.circle-editor-rgcode {
+  flex: 0 0 90px;
+}
+
+.circle-editor-name:focus,
+.circle-editor-rgcode:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.circle-editor-error {
+  min-height: 16px;
+  margin: 0 0 10px;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.circle-editor-box > .btn {
+  margin-bottom: 14px;
+}
+
+/* ---------------------------------------------------------------
+   Settings window
+------------------------------------------------------------------ */
+.settings-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 460px;
+  max-width: 92vw;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.settings-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.settings-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 4px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: default;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.settings-body {
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 14px;
+}
+
+.settings-tab-pane {
+  display: none;
+}
+
+.settings-tab-pane.is-active {
+  display: block;
+}
+
+.settings-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 10px 12px;
+  margin: 0 0 12px;
+}
+
+.settings-group > legend,
+.settings-subgroup > legend {
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.settings-subgroup {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 8px 10px 10px;
+  margin-top: 10px;
+}
+
+.settings-size-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.settings-size-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.settings-size-group input {
+  width: 50px;
+  margin-left: 4px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.settings-row + .settings-row {
+  margin-top: 10px;
+}
+
+.settings-radio,
+.settings-checkbox {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 6px;
+  cursor: default;
+}
+
+.settings-radio input,
+.settings-checkbox input {
+  margin-right: 6px;
+  accent-color: var(--accent);
+}
+
+.settings-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 7px;
+}
+
+textarea.settings-input {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
+.settings-group input[type="number"],
+.settings-subgroup input[type="number"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 5px;
+}
+
+.settings-font-size {
+  width: 60px;
+}
+
+.settings-input:focus,
+.settings-group input:focus,
+.settings-subgroup input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-hint {
+  margin: 6px 0 8px;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-inline-number {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+.settings-inline-number input {
+  width: 50px;
+  margin-left: 6px;
+}
+
+.settings-inline-select {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.settings-inline-select select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.settings-engine-select {
+  display: block;
+  margin: 10px 0 4px;
+}
+
+.settings-buttons {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------
+   Report modal (Find duplicates results)
+------------------------------------------------------------------ */
+.report-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 480px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.report-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.report-list {
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+
+.report-list-item {
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.report-list-item:last-child {
+  border-bottom: none;
+}
+
+.report-list-item .report-path {
+  display: block;
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.report-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 10px 2px 14px;
+}
+
+.import-log {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 50vh;
+  margin: 0 0 14px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------
+   Context menu (right-click a game row)
+------------------------------------------------------------------ */
+.context-menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 190px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+.context-menu-item:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.context-menu-item:disabled {
+  opacity: 0.4;
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+/* ---------------------------------------------------------------
+   Status bar
+------------------------------------------------------------------ */
+#status-bar {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#status-activity {
+  color: var(--accent-text);
+}
+
+#status-activity:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------
+   Small-window behavior
+------------------------------------------------------------------ */
+@media (max-width: 760px) {
+  #workspace {
+    flex-direction: column;
+  }
+
+  #edit-panel {
+    flex: 0 0 auto;
+    max-height: 45vh;
+    border-top: 1px solid var(--border);
+  }
+}

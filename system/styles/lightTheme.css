@@ -1,0 +1,42 @@
+/* system/lightTheme.css
+   Light theme - overrides the dark palette's :root custom properties.
+   Loaded as a second stylesheet (see index.html's #theme-stylesheet
+   link) and toggled via its `disabled` property, rather than swapping
+   style.css itself - everything else already reads these tokens via
+   var(--x), so redefining just the tokens here is enough. */
+
+:root {
+  --bg: #f5f3ee;
+  --panel: #ffffff;
+  --panel-alt: #ece8e0;
+  --border: #d3cdc0;
+  --border-soft: #e3ddd0;
+
+  --text: #1c1a16;
+  --text-muted: #5c5648;
+  --text-faint: #8a7f68;
+
+  --accent: #b0472c;
+  --accent-soft: rgba(176, 71, 44, 0.10);
+  --accent-text: #8a3420;
+
+  --gold: #b8860b;
+  --gold-dim: #e8dcb0;
+
+  --scrollbar-track: #e0dccf;
+  --scrollbar-thumb: #b0a890;
+  --scrollbar-hover: #8a8270;
+  --scrollbar-corner: #f5f3ee;
+}
+
+.btn--primary {
+  color: #fff5ef;
+}
+
+.window-controls button {
+  color: #1c1a16;
+}
+
+.window-controls button:hover {
+  background-color: #e3ddd0;
+}
