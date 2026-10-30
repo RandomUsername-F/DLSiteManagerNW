@@ -276,6 +276,7 @@ function initViewMenu() {
 // ANDed with the find-bar text. Picking the active one again clears it.
 // ---------------------------------------------------------------
 let activeFilter = null; // null | 'duplicates' | 'favorites' | 'missingTags' | 'brokenLinks'
+let brokenCheckToken = 0;
 let allGames = [];
 
 function initHelpButton() {
@@ -302,15 +303,26 @@ function baseCode(code) {
 
 function applyRowFilter() {
   if (!table) return;
+  brokenCheckToken++; // invalidates any Broken Links check still in flight
 
   if (activeFilter === 'favorites') {
     table.setRowPredicate(g => g.favorite);
   } else if (activeFilter === 'missingTags') {
     table.setRowPredicate(g => !g.tags || (Array.isArray(g.tags) ? g.tags.length === 0 : !String(g.tags).trim()));
   } else if (activeFilter === 'brokenLinks') {
-    // Checked against the disk each time the list refreshes. An empty path counts as broken.
-    const broken = new Set(allGames.filter(g => !g.path || !fs.existsSync(g.path)).map(g => g.productCode));
-    table.setRowPredicate(g => broken.has(g.productCode));
+    // Checked against the disk each time the list refreshes (an empty path counts
+    // as broken). Async so a slow/unreachable drive can't freeze the UI; the
+    // token drops the result if the list or filter changed while it was running.
+    const token = ++brokenCheckToken;
+    const games = allGames;
+    Promise.all(games.map(g => g.path
+      ? fs.promises.access(g.path).then(() => null, () => g.productCode)
+      : g.productCode
+    )).then(codes => {
+      if (token !== brokenCheckToken || activeFilter !== 'brokenLinks') return;
+      const broken = new Set(codes.filter(Boolean));
+      table.setRowPredicate(g => broken.has(g.productCode));
+    });
   } else if (activeFilter === 'duplicates') {
     // A game is a duplicate if any of its codes (base product code, DLC code)
     // is also claimed by a different game.

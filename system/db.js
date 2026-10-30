@@ -199,7 +199,26 @@ function setPreBackupHook(fn) {
   preBackupHook = fn;
 }
 
-async function saveGameBackup(productCode, options) {
+/**
+ * Backup writes are queued per game and use async file I/O: a slow or
+ * briefly unreachable disk (network/removable drive, sleeping HDD) must
+ * never freeze the UI thread, and two quick saves for the same game (e.g.
+ * a checkbox change followed by a blur) must not interleave their writes.
+ */
+const backupChains = new Map(); // productCode -> tail of that game's write queue
+
+function saveGameBackup(productCode, options) {
+  const previous = backupChains.get(productCode) || Promise.resolve();
+  const next = previous.catch(() => {}).then(() => writeGameBackup(productCode, options));
+  backupChains.set(productCode, next);
+  next.catch(() => {}).finally(() => {
+    if (backupChains.get(productCode) === next) backupChains.delete(productCode);
+  });
+  return next;
+}
+
+async function writeGameBackup(productCode, options) {
+  // Read at write time (not call time) so a queued write always saves the latest state.
   const record = await db.games.get(productCode);
   if (!record) return;
 
@@ -213,8 +232,8 @@ async function saveGameBackup(productCode, options) {
 
   try {
     const folder = path.join(GAMES_ROOT, productCode);
-    fs.mkdirSync(path.join(folder, 'images'), { recursive: true });
-    fs.writeFileSync(path.join(folder, 'info.json'), JSON.stringify(record, null, 2), 'utf8');
+    await fs.promises.mkdir(path.join(folder, 'images'), { recursive: true });
+    await fs.promises.writeFile(path.join(folder, 'info.json'), JSON.stringify(record, null, 2), 'utf8');
   } catch (e) {
     console.error('Failed to write backup JSON for', productCode, e);
   }

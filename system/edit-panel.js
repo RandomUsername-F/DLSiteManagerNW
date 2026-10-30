@@ -347,6 +347,10 @@ _bindStaticHandlers() {
     const input = key === 'launcher' ? this.launcherInput : this.launchParamsInput;
     const value = { enabled: checkbox.checked, value: input.value };
 
+    // Blur fires every time the field loses focus, changed or not - skip the save (and the list refresh) when nothing differs.
+    const previous = this.currentRecord[key] || { enabled: false, value: '' };
+    if (!!previous.enabled === value.enabled && (previous.value || '') === value.value) return;
+
     this.currentRecord[key] = value;
     await this.onUpdateLaunchSettings(this.currentRecord.productCode, { [key]: value });
     this.onRecordChanged();
