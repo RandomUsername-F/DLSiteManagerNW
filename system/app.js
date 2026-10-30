@@ -800,10 +800,23 @@ async function runLaunch(resolvedGame) {
   if (!record) return;
 
   try {
-    launchGame(record);
+    await launchGame(record); // resolves once the process has actually started
   } catch (e) {
     console.error('Launch failed for', resolvedGame.productCode, e);
     await confirmDialog(`Could not launch ${resolvedGame.title || resolvedGame.productCode}: ${e.message}`, { okLabel: 'OK', cancelLabel: 'OK' });
+    return;
+  }
+
+  // Started successfully: stamp Last Played (stored as the user's own value, so it wins over any imported one).
+  try {
+    await updateGameOverride(record.productCode, { lastPlayedDate: new Date().toISOString() });
+    await refreshGames();
+    // Don't re-render the panel mid-edit - that would throw away unsaved changes.
+    if (editPanel.currentRecord && editPanel.currentRecord.productCode === record.productCode && !editPanel.editing) {
+      await editPanel.show(record.productCode);
+    }
+  } catch (e) {
+    console.error('Failed to record last played for', record.productCode, e);
   }
 }
 
